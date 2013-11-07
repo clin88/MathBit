@@ -16,6 +16,7 @@ class EquationParser(object):
 
         1. Removes spaces.
         2. Changes minus operators into + -n.
+        3. Changes implicit multiplication into explicit (xy -> x * y; (-(a + b) -> -1 * (a + b))
         """
         return self._parse(deque(equation))
 
@@ -39,7 +40,7 @@ class EquationParser(object):
         operators = []
 
         is_letter = lambda x: x.lower() in string.lowercase
-        is_number = lambda x: x in '0123456789.'
+        is_number = lambda x: x in '-0123456789.'
         parse_number = lambda x: D(x) if '.' in x else int(x)
 
         def match_sequence(equation, match_fn):
@@ -64,11 +65,6 @@ class EquationParser(object):
 
             elif char in CLOSE_BRACKETS:
                 break
-
-            # must be a negative sign, since subtraction is changed into + -n.
-            elif char == '-':
-                symbols.append(-1)
-                operators.append('*')
 
             elif is_number(char):
                 n = char + match_sequence(equation, is_number)
