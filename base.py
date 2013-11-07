@@ -13,6 +13,23 @@ class BaseOperator(object):
         sign = "%s %s %s"
         return "(" + reduce(lambda x, y: sign % (str(x), self.sign, str(y)), self.args) + ")"
 
+    def __eq__(self, other):
+        if not isinstance(other, BaseOperator):
+            return False
+
+        if len(self.args) != len(other.args):
+            return False
+
+        for left, right in zip(self.args, other.args):
+            if left != right:
+                return False
+
+        return True
+
+    def __ne__(self, other):
+        return not self. __eq__(other)
+
+
     def __treerepr__(self):
         """
         Returns a more verbose representation including class names and expression tree hierarchy.
