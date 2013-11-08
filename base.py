@@ -27,15 +27,7 @@ class BaseOperator(object):
         return True
 
     def __ne__(self, other):
-        return not self. __eq__(other)
-
-
-    def __treerepr__(self):
-        """
-        Returns a more verbose representation including class names and expression tree hierarchy.
-        """
-        sign = "%s %s %s"
-        return "(" + reduce(lambda x, y: sign % (str(x), self.sign, str(y)), self.args) + ")"
+        return not self.__eq__(other)
 
 
 class Noncommutative(BaseOperator):

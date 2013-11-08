@@ -15,8 +15,7 @@ class EquationParser(object):
         Preprocess the equation before feeding it to the parser.
 
         1. Removes spaces.
-        2. Changes minus operators into + -n.
-        3. Changes implicit multiplication into explicit (xy -> x * y; (-(a + b) -> -1 * (a + b))
+        2. Changes implicit multiplication into explicit (xy -> x * y; (-(a + b) -> -1 * (a + b))
         """
         return self._parse(deque(equation))
 
