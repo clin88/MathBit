@@ -7,20 +7,25 @@ class BaseOperator(object):
     sign = '?'
 
     def __init__(self, *args):
-        self.args = list(args)
+        self._children = []
+        self._parent = None
+        self.add_children(*list(args))
 
     def __repr__(self):
         sign = "%s %s %s"
-        return "(" + reduce(lambda x, y: sign % (str(x), self.sign, str(y)), self.args) + ")"
+        if len(self.children) > 1:
+            return reduce(lambda x, y: sign % (repr(x), self.sign, repr(y)), self.children)
+        else:
+            return repr(self.children[0])
 
     def __eq__(self, other):
         if not isinstance(other, BaseOperator):
             return False
 
-        if len(self.args) != len(other.args):
+        if len(self.children) != len(other.children):
             return False
 
-        for left, right in zip(self.args, other.args):
+        for left, right in zip(self.children, other.children):
             if left != right:
                 return False
 
@@ -29,6 +34,28 @@ class BaseOperator(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @property
+    def children(self):
+        return self._children
+
+    def add_children(self, *args):
+        """
+            Canonical function for appending to children list.
+
+            Sets _parent property.
+        """
+        for arg in args:
+            self._children.append(arg)
+            if isinstance(arg, BaseOperator):
+                arg.parent = self
+
+    @property
+    def parent(self):
+        return self._parent
+
+    @parent.setter
+    def parent(self, arg):
+        self._parent = arg
 
 class Noncommutative(BaseOperator):
     """
