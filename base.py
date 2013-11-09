@@ -57,6 +57,10 @@ class BaseOperator(Node):
 
     @property
     def children(self):
+        """
+            Note that while children returns a pointer to a mutable list, making changes should be done through the
+            helper functions.
+        """
         return self._children
 
     def add_children(self, *args):
@@ -72,14 +76,19 @@ class BaseOperator(Node):
             if not isinstance(arg, Node):
                 arg = mathify(arg)
 
-            arg.index = len(self._children)
             arg.parent = self
             self._children.append(arg)
 
-    def replace_child_at_index(self, index, arg):
+    def replace_child(self, index, arg):
         self._children[index] = arg
         arg.parent = self
-        arg.index = index
+
+    def pop_child(self, index):
+        self._children.pop(index)
+
+    def insert_child(self, index, child):
+        self._children.insert(index, child)
+        child.parent = self
 
 
 class Noncommutative(BaseOperator):

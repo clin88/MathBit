@@ -54,13 +54,13 @@ class Number(Node):
         return str(self.number)
 
     def __eq__(self, other):
-        if isinstance(other, Number):
-            return self.number == other.number
-        else:
-            return self.number == other
+        return self.number == other.number
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __mul__(self, other):
+        return Number(self.number * other.number)
 
 
 class Symbol(Node):
