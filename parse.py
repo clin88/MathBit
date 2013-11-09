@@ -78,15 +78,16 @@ class EquationParser(object):
             index = 0
             while index < len(operators):
                 op = operators[index]
-                symbs = []
-                if operators[index] in current_op:
-                    # this is the beginning of an operator chain (i.e. 4 * x * y * x)
-                    while index < len(operators) and operators[index] == op:
-                        symbs.append(symbols.pop(index))
-                        operators.pop(index)
-                    symbs.append(symbols.pop(index))
-                    symbols.insert(index, OPERATOR_TO_CLASS_MAP[op](*symbs))
-                else:
+                if op not in current_op:
                     index += 1
+                    continue
+
+                # this is the beginning of an operator chain (i.e. 4 * x * y * x)
+                symbs = []
+                while index < len(operators) and operators[index] == op:
+                    symbs.append(symbols.pop(index))
+                    operators.pop(index)
+                symbs.append(symbols.pop(index))
+                symbols.insert(index, OPERATOR_TO_CLASS_MAP[op](*symbs))
 
         return symbols[0]
