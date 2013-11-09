@@ -17,7 +17,7 @@ class EquationParser(object):
         1. Removes spaces.
         2. Changes implicit multiplication into explicit (xy -> x * y; (-(a + b) -> -1 * (a + b))
         """
-        return self._parse(deque(equation))
+        return Expr(self._parse(deque(equation)))
 
     def _parse(self, equation):
         """
@@ -60,7 +60,7 @@ class EquationParser(object):
                 operators.append(char)
 
             elif char in OPEN_BRACKETS:
-                symbols.append(Brackets(self._parse(equation)))
+                symbols.append(self._parse(equation))
 
             elif char in CLOSE_BRACKETS:
                 break

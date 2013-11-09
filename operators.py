@@ -9,14 +9,10 @@ from base import BaseOperator, Noncommutative, Node
         +- = 3
 """
 
-
-class Brackets(BaseOperator):
-    oop = '0'
-
+class Expr(BaseOperator):
+    oop = '99'
     def __repr__(self):
-        s = "(%s)"
-        return s % super(Brackets, self).__repr__()
-
+        return repr(self.children[0])
 
 class Pow(Noncommutative):
     sign = '^'
