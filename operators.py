@@ -1,5 +1,5 @@
-from base import BaseOperator, Noncommutative
-
+from decimal import Decimal as D
+from base import BaseOperator, Noncommutative, Node
 """
     Order of operations:
 
@@ -43,3 +43,39 @@ class Plus(BaseOperator):
 class Eq(BaseOperator):
     sign = '='
 
+
+class Number(Node):
+    def __init__(self, arg):
+        if type(arg) is str:
+            self.number = D(arg) if '.' in arg else int(arg)
+        else:
+            self.number = arg
+
+        super(Number, self).__init__(arg)
+
+    def __repr__(self):
+        return str(self.number)
+
+    def __eq__(self, other):
+        if isinstance(other, Number):
+            return self.number == other.number
+        else:
+            return self.number == other
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class Symbol(Node):
+    def __init__(self, arg):
+        self.symbol = arg
+        super(Symbol, self).__init__(arg)
+
+    def __repr__(self):
+        return self.symbol
+
+    def __eq__(self, other):
+        return self.symbol == other.symbol
+
+    def __ne__(self, other):
+        return not self.__eq__(other)

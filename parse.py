@@ -67,11 +67,11 @@ class EquationParser(object):
 
             elif is_number(char):
                 n = char + match_sequence(equation, is_number)
-                symbols.append(parse_number(n))
+                symbols.append(Number(n))
 
             elif is_letter(char):
                 symb = char + match_sequence(equation, is_letter)
-                symbols.append(symb)
+                symbols.append(Symbol(symb))
 
         # parse symbol and operator lists into expression tree, following order of operations
         for current_op in ORDER_OF_OPERATIONS:

@@ -3,13 +3,26 @@ Definitions for low level, base operator classes.
 """
 
 
-class BaseOperator(object):
+class Node(object):
+    def __init__(self, *args, **kwargs):
+        self._parent = None
+
+    @property
+    def parent(self):
+        return self._parent
+
+    @parent.setter
+    def parent(self, arg):
+        self._parent = arg
+
+
+class BaseOperator(Node):
     sign = '?'
 
     def __init__(self, *args):
         self._children = []
-        self._parent = None
         self.add_children(*list(args))
+        super(BaseOperator, self).__init__(*args)
 
     def __repr__(self):
         sign = "%s %s %s"
@@ -44,18 +57,22 @@ class BaseOperator(object):
 
             Sets _parent property.
         """
+        # import must be here to avoid circular reference
+        from expression_helpers import mathify
+
         for arg in args:
+            if not isinstance(arg, Node):
+                arg = mathify(arg)
+
+            arg.index = len(self._children)
+            arg.parent = self
             self._children.append(arg)
-            if isinstance(arg, BaseOperator):
-                arg.parent = self
 
-    @property
-    def parent(self):
-        return self._parent
+    def replace_child_at_index(self, index, arg):
+        self._children[index] = arg
+        arg.parent = self
+        arg.index = index
 
-    @parent.setter
-    def parent(self, arg):
-        self._parent = arg
 
 class Noncommutative(BaseOperator):
     """
