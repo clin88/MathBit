@@ -25,11 +25,19 @@ class BaseOperator(Node):
         super(BaseOperator, self).__init__(*args)
 
     def __repr__(self):
+        # when parent has operator precedence, show parenthesis to indicate priority:
+        #   e.g. Mult(Plus(4, 5), 3): 4 + 5 * 3 -> (4 + 5) * 3
+
         sign = "%s %s %s"
         if len(self.children) > 1:
-            return reduce(lambda x, y: sign % (repr(x), self.sign, repr(y)), self.children)
+            rep = reduce(lambda x, y: sign % (str(x), self.sign, str(y)), self.children)
         else:
-            return repr(self.children[0])
+            rep = str(self.children[0])
+
+        if self.parent.oop <= self.oop:
+            return '(%s)' % rep
+        else:
+            return rep
 
     def __eq__(self, other):
         if not isinstance(other, BaseOperator):
