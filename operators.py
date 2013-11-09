@@ -10,34 +10,35 @@ from base import BaseOperator, Noncommutative, Node
 """
 
 class Expr(BaseOperator):
-    oop = '99'
+    oop = 99
     def __repr__(self):
         return repr(self.children[0])
 
 class Pow(Noncommutative):
     sign = '^'
-    oop = '1'
+    oop = 1
     order = Noncommutative.RIGHT_TO_LEFT
 
 
 class Mult(BaseOperator):
     sign = '*'
-    oop = '2'
+    oop = 2
 
 
 class Fraction(Noncommutative):
     sign = '/'
-    oop = '2'
+    oop = 2
     order = Noncommutative.LEFT_TO_RIGHT
 
 
 class Plus(BaseOperator):
     sign = '+'
-    oop = '3'
+    oop = 3
 
 
 class Eq(BaseOperator):
     sign = '='
+    oop = 10
 
 
 class Number(Node):
