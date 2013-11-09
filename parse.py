@@ -30,8 +30,9 @@ class EquationParser(object):
             ('*', Mult),
             ('/', Fraction),
             ('+', Plus),
+            ('=', Eq)
         ])
-        ORDER_OF_OPERATIONS = ['^', '*/', '+']
+        ORDER_OF_OPERATIONS = ['^', '*/', '+', '=']
         OPEN_BRACKETS = "({["
         CLOSE_BRACKETS = "]})"
 
@@ -64,6 +65,10 @@ class EquationParser(object):
 
             elif char in CLOSE_BRACKETS:
                 break
+
+            elif char == '=':
+                symbols.append(self._parse(equation))
+                operators.append(char)
 
             elif is_number(char):
                 n = char + match_sequence(equation, is_number)

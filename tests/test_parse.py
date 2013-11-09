@@ -2,7 +2,6 @@ from parse import *
 from operators import *
 from decimal import Decimal as D
 import solver
-from solver import Simplifier
 from abbreviated_operations import *
 
 p = EquationParser()
@@ -27,3 +26,6 @@ def test_parse_float():
 def test_parse_misc():
     assert p.parse('3 * 4 + -5 / 3 ^ 5') == Expr(Plus(Mult(3, 4), Fraction(-5, Pow(3, 5))))
 
+def test_parse_equals():
+    assert p.parse('3 = 4') == Ex(Eq(3, 4))
+    assert p.parse('3 ^ 2 = 6') == Ex(Eq(P(3, 2), 6))
