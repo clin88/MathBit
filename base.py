@@ -16,13 +16,13 @@ class Node(object):
         self._parent = arg
 
 
-class BaseOperator(Node):
+class Operator(Node):
     sign = '?'
 
     def __init__(self, *args):
         self._children = []
         self.add_children(*list(args))
-        super(BaseOperator, self).__init__(*args)
+        super(Operator, self).__init__(*args)
 
     def __repr__(self):
         # when parent has operator precedence, show parenthesis to indicate priority:
@@ -32,15 +32,15 @@ class BaseOperator(Node):
         if len(self.children) > 1:
             rep = reduce(lambda x, y: sign % (str(x), self.sign, str(y)), self.children)
         else:
-            rep = str(self.children[0])
+            rep = str(self.children[0]) if self.children else repr(None)
 
-        if self.parent.oop <= self.oop:
+        if self.parent and self.parent.oop <= self.oop:
             return '(%s)' % rep
         else:
             return rep
 
     def __eq__(self, other):
-        if not isinstance(other, BaseOperator):
+        if not isinstance(other, Operator):
             return False
 
         if len(self.children) != len(other.children):
@@ -79,19 +79,20 @@ class BaseOperator(Node):
             arg.parent = self
             self._children.append(arg)
 
-    def replace_child(self, index, arg):
-        self._children[index] = arg
-        arg.parent = self
+    def replace_child(self, index, child):
+        self._children[index] = child
+        child.parent = self
 
     def pop_child(self, index):
         self._children.pop(index)
 
-    def insert_child(self, index, child):
-        self._children.insert(index, child)
-        child.parent = self
+    def insert_child(self, index, *children):
+        for delta, child in enumerate(children):
+            self._children.insert(index + delta, child)
+            child.parent = self
 
 
-class Noncommutative(BaseOperator):
+class Noncommutative(Operator):
     """
     Describes noncommutative operators. These should be parsed (using division as an example):
 

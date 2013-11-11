@@ -1,4 +1,4 @@
-from abbreviated_operations import *
+from testhelpers import *
 from parse import EquationParser
 
 p = EquationParser()

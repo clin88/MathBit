@@ -1,4 +1,4 @@
-from base import BaseOperator
+from base import Operator
 from operators import *
 
 def walk_expr(expr, *types):
@@ -10,7 +10,7 @@ def walk_expr(expr, *types):
         if not types or type(child) in types:
             yield child
 
-        if isinstance(child, BaseOperator):
+        if isinstance(child, Operator):
             for obj in walk_expr(child, *types):
                 yield obj
 

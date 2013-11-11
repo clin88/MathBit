@@ -1,5 +1,5 @@
 from decimal import Decimal as D
-from base import BaseOperator, Noncommutative, Node
+from base import Operator, Noncommutative, Node
 """
     Order of operations:
 
@@ -9,7 +9,7 @@ from base import BaseOperator, Noncommutative, Node
         +- = 3
 """
 
-class Expr(BaseOperator):
+class Expr(Operator):
     oop = 99
     def __repr__(self):
         return repr(self.children[0])
@@ -20,7 +20,7 @@ class Pow(Noncommutative):
     order = Noncommutative.RIGHT_TO_LEFT
 
 
-class Mult(BaseOperator):
+class Mult(Operator):
     sign = '*'
     oop = 2
 
@@ -30,13 +30,21 @@ class Fraction(Noncommutative):
     oop = 2
     order = Noncommutative.LEFT_TO_RIGHT
 
+    @property
+    def numerator(self):
+        return self.children[0]
 
-class Plus(BaseOperator):
+    @property
+    def denominator(self):
+        return self.children[1]
+
+
+class Plus(Operator):
     sign = '+'
     oop = 3
 
 
-class Eq(BaseOperator):
+class Eq(Operator):
     sign = '='
     oop = 10
 
@@ -54,7 +62,7 @@ class Number(Node):
         return str(self.number)
 
     def __eq__(self, other):
-        return self.number == other.number
+        return self.number == other
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -72,7 +80,7 @@ class Symbol(Node):
         return self.symbol
 
     def __eq__(self, other):
-        return self.symbol == other.symbol
+        return self.symbol == other
 
     def __ne__(self, other):
         return not self.__eq__(other)

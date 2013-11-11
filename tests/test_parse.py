@@ -2,7 +2,7 @@ from parse import *
 from operators import *
 from decimal import Decimal as D
 import solver
-from abbreviated_operations import *
+from testhelpers import *
 
 p = EquationParser()
 
