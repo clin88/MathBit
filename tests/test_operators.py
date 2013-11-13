@@ -1,4 +1,7 @@
 from testhelpers import *
+from base import Operator
+from base import Commutative as Com
+from base import Noncommutative as NCom
 from parse import EquationParser
 
 p = EquationParser()
@@ -20,3 +23,10 @@ def test_repr_basic():
 #
 #    # if contained in noncommutative operation, but it's going to be first anyway, ditch paranthesis.
 #    #assert repr(p.parse('(5 / 4) * 3')) == '5 / 4 * 3'
+
+def test_hash():
+    assert hash(Com(1, 2)) == hash(Com(2, 1))
+    assert hash(Com(1, Com(2, 1))) == hash(Com(1, Com(1, 2)))
+
+    assert hash(NCom(1, 2)) == hash(NCom(1, 2))
+    assert hash(NCom(1, 2)) != hash(NCom(2, 1))

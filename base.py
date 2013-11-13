@@ -1,7 +1,9 @@
 """
 Definitions for low level, base operator classes.
 """
-
+from decimal import Decimal as D
+from functools import total_ordering
+import copy
 
 class Node(object):
     def __init__(self, *args, **kwargs):
@@ -16,8 +18,10 @@ class Node(object):
         self._parent = arg
 
 
+@total_ordering
 class Operator(Node):
     sign = '?'
+    oop = 999
 
     def __init__(self, *args):
         self._children = []
@@ -40,20 +44,14 @@ class Operator(Node):
             return rep
 
     def __eq__(self, other):
-        if not isinstance(other, Operator):
-            return False
+        return hash(self) == hash(other)
 
-        if len(self.children) != len(other.children):
-            return False
+    def __gt__(self, other):
+        return hash(self) > hash(other)
 
-        for left, right in zip(self.children, other.children):
-            if left != right:
-                return False
-
-        return True
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
+    def __hash__(self):
+        sorted_children = tuple(sorted(self.children))
+        return hash(sorted_children)
 
     @property
     def children(self):
@@ -92,14 +90,17 @@ class Operator(Node):
             child.parent = self
 
 
+class Commutative(Operator):
+    pass
+
 class Noncommutative(Operator):
     """
     Describes noncommutative operators. These should be parsed (using division as an example):
 
-    left = (1, 2, 3) -> ((1, 2), 3)
+    leftright means (1, 2, 3) -> ((1, 2), 3)
     e.g. division: 1 / 2 / 3 == (1 / 2) / 3
 
-    right = (1, 2, 3) -> (1, (2, 3))
+    rightleft means (1, 2, 3) -> (1, (2, 3))
     e.g. exponents: 1 ^ 2 ^ 3 == 1 ^ (2 ^ 3)
     """
     LEFT_TO_RIGHT = 'leftright'
@@ -113,3 +114,57 @@ class Noncommutative(Operator):
                 args = [args[0], self.__class__(*args[1:])]
 
         super(Noncommutative, self).__init__(*args)
+
+    def __hash__(self):
+        return hash(tuple(self.children))
+
+
+@total_ordering
+class Number(Node):
+    def __init__(self, arg):
+        if type(arg) is str:
+            self.number = D(arg) if '.' in arg else int(arg)
+        elif type(arg) is float:
+            self.number = D(arg)
+        else:
+            self.number = arg
+
+        super(Number, self).__init__(arg)
+
+    def __repr__(self):
+        return str(self.number)
+
+    def __gt__(self, other):
+        if isinstance(other, Number):
+            return self.number > other.number
+        else:
+            return self.number > other
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
+    def __mul__(self, other):
+        return Number(self.number * other.number)
+
+    def __hash__(self):
+        return hash(self.number)
+
+
+@total_ordering
+class Symbol(Node):
+    def __init__(self, arg):
+        self.symbol = arg
+        super(Symbol, self).__init__(arg)
+
+    def __repr__(self):
+        return self.symbol
+
+    def __gt__(self, other):
+        return self.symbol > other
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
+    def __hash__(self):
+        return hash(self.symbol)
+

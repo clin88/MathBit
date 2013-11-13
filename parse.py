@@ -1,6 +1,5 @@
 import string
 from array import array
-from decimal import Decimal as D
 from collections import deque, OrderedDict
 from operators import *
 
