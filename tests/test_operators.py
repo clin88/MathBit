@@ -1,10 +1,8 @@
 from testhelpers import *
-from base import Operator
-from base import Commutative as Com
-from base import Noncommutative as NCom
 from parse import EquationParser
 
 p = EquationParser()
+
 
 def test_repr_basic():
     assert repr(p.parse('5 + 4')) == '5 + 4'

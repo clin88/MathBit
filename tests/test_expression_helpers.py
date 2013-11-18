@@ -1,4 +1,3 @@
-from testhelpers import *
 from operators import *
 
 """
@@ -15,6 +14,6 @@ def test_walk_expr():
 
     # test print SELECT objects
     #expr = p.parse('3 * x + (5 ^ 2 * (4 + 3))')
-    expr = Expr(Plus(Mult(3, 'x'), Mult(Pow(5, D('2.1')), Plus(4, 3))))
-    assert list(walk_expr(expr, Mult)) == [Mult(3, 'x'), Mult(Pow(5, D('2.1')), Plus(4, 3))]
+    expr = Expr(Plus(Mult(3, 'x'), Mult(Exp(5, D('2.1')), Plus(4, 3))))
+    assert list(walk_expr(expr, Mult)) == [Mult(3, 'x'), Mult(Exp(5, D('2.1')), Plus(4, 3))]
     assert list(walk_expr(expr, N)) == [N(3), N(5), N('2.1'), N(4), N(3)]

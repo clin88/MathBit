@@ -1,6 +1,3 @@
-from base import Operator
-from operators import *
-
 def walk_expr(expr, *types):
     """
         Generator for iterating through all objects of type in *types.
@@ -15,11 +12,5 @@ def walk_expr(expr, *types):
                 yield obj
 
 
-def mathify(obj):
-    if isinstance(obj, D) or isinstance(obj, int) or isinstance(obj, float):
-        return Number(obj)
-    elif isinstance(obj, str):
-        return Symbol(obj)
-    else:
-        return TypeError("Object %s not a valid math type. Cannot coerce into Number or Symbol." % repr(obj))
+
 

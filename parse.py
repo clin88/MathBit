@@ -15,8 +15,9 @@ class EquationParser(object):
 
         1. Removes spaces.
         2. Changes implicit multiplication into explicit (xy -> x * y; (-(a + b) -> -1 * (a + b))
+        3. Passes through a deque object.
         """
-        return Expr(self._parse(deque(equation)))
+        return self._parse(deque(equation))
 
     def _parse(self, equation):
         """
@@ -25,7 +26,7 @@ class EquationParser(object):
         Don't call directly--let parse() preprocess the equation first.
         """
         OPERATOR_TO_CLASS_MAP = OrderedDict([
-            ('^', Pow),
+            ('^', Exp),
             ('*', Mult),
             ('/', Fraction),
             ('+', Plus),
