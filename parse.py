@@ -17,7 +17,7 @@ class EquationParser(object):
         2. Changes implicit multiplication into explicit (xy -> x * y; (-(a + b) -> -1 * (a + b))
         3. Passes through a deque object.
         """
-        return self._parse(deque(equation))
+        return Expr(self._parse(deque(equation)))
 
     def _parse(self, equation):
         """
