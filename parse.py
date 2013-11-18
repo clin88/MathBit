@@ -4,10 +4,6 @@ from collections import deque, OrderedDict
 from operators import *
 
 
-class ParseError(Exception):
-    pass
-
-
 class EquationParser(object):
     def parse(self, equation):
         """
@@ -41,7 +37,6 @@ class EquationParser(object):
 
         is_letter = lambda x: x.lower() in string.lowercase
         is_number = lambda x: x in '-0123456789.'
-        parse_number = lambda x: D(x) if '.' in x else int(x)
 
         def match_sequence(equation, match_fn):
             o = array('c')
