@@ -13,20 +13,18 @@ class Simplifier(object):
 
             1. Combines like terms.
         """
-        if isinstance(expr, Expr):
-            node = expr.children[0]
-        else:
-            node = expr
+        assert isinstance(expr, Expr)
+        self._expression = expr
+        self._simplify_expr(self._expression.child)
+        return self._expression
 
+    def _simplify_expr(self, node):
         if isinstance(node, Mult):
-            node = self._simplify_mult(node)
+            self._simplify_mult(node)
         elif isinstance(node, Plus):
-            node = self._simplify_addition(node)
+            self._simplify_addition(node)
 
-        if isinstance(expr, Expr):
-            return Expr(node)
-        else:
-            return node
+        return node
 
 
     def _simplify_mult(self, node):
@@ -40,7 +38,7 @@ class Simplifier(object):
 
         for child in node.children:
             if isinstance(child, Operator):
-                child = self.simplify_expr(child)
+                self._simplify_expr(child)
 
             if isinstance(child, Fraction):
                 numerator.add_children(child.numerator)
@@ -48,14 +46,15 @@ class Simplifier(object):
             else:
                 numerator.add_children(child)
 
-        numerator = self._simplify_product(numerator)
-        denominator = self._simplify_product(denominator)
-
-        if not denominator.children or denominator == 1:
-            return numerator
+        if not denominator.children:
+            self._simplify_product(node)
         else:
             # TODO: Simplify this fraction
-            return Fraction(numerator, denominator)
+            fraction = Fraction(numerator, denominator)
+            node.replace_self(fraction)
+            self._simplify_product(fraction.numerator)
+            self._simplify_product(fraction.denominator)
+            # TODO: Report step
 
 
     def _simplify_product(self, node):
@@ -70,7 +69,7 @@ class Simplifier(object):
 
             # remove nested multiplication. e.g. 2 * (x * 3) -> 2 * x * 3
             if isinstance(child, Mult):
-                node.insert_child(0, *child.children)
+                node.add_children(*child.children)
             elif isinstance(child, Number):
                 constant *= child
             elif isinstance(child, Exp):
@@ -84,11 +83,11 @@ class Simplifier(object):
         for factor, power in factors.iteritems():
             node.add_children(Exp(factor, power))                       # TODO: Simplify on the fly, this should also simplify exponents of 1
 
+        # TODO: Report step
+
         # if after simplification, node is only one item, carry it out
         if len(node.children) == 1:
-            node = node.children[0]
-
-        return node
+            node.replace_self(node.children[0])
 
 
     def _simplify_addition(self, node):
@@ -100,7 +99,7 @@ class Simplifier(object):
         terms = OrderedDict()
         while node.children:
             child = node.pop_child(0)
-            child = self.simplify_expr(child)
+            self._simplify_expr(child)
 
             if isinstance(child, Plus):
                 node.add_children(*child.children)
@@ -110,22 +109,22 @@ class Simplifier(object):
                 # we assume that this is in simplified form, so the constant factor comes first or not at all
                 if isinstance(child.children[0], Number):
                     n = child.pop_child(0)
-                    terms[child] = terms.get(child, 0) + n
                 else:
-                    terms[child] = terms.get(child, 0) + 1
+                    n = 1
+
+                terms[child] = terms.get(child, 0) + n
             # TODO: Support fractions
             else:
                 terms[child] = terms.get(child, 0) + 1
 
         for term, count in terms.iteritems():
-            node.add_children(self.simplify_expr(Mult(count, term)))
+            node.add_children(self._simplify_expr(Mult(count, term)))
 
-        node.add_children(constant)
+        if constant:
+            node.add_children(constant)
 
         if len(node.children) == 1:
-            node = node.children[0]
-
-        return node
+            node.replace_self(node.children[0])
 
 
         # TODO: Use numbers module for numbers.

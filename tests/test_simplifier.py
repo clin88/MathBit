@@ -12,7 +12,7 @@ def test_solver_mult_basic():
 
 
 def test_solver_mult_combine_symbols():
-    assert test(s.simplify_expr, p.parse('x * X')) == Ex(E('x', 2))
+    assert test(s.simplify_expr, p.parse('x * x')) == Ex(E('x', 2))
     #assert test(simplify_expr, p.parse('3 * x * y * 3 * y / (4 * y * x)')) ==\
     #       F(M(9, S('x'), E(S('y'), 2)), M(4, S('y'), S('x'))))
 

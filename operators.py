@@ -19,6 +19,10 @@ class Expr(Operator):
     def __repr__(self):
         return repr(self.children[0])
 
+    @property
+    def child(self):
+        return self.children[0]
+
 
 class Exp(Noncommutative):
     sign = '^'

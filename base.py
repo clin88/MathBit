@@ -99,8 +99,6 @@ class Operator(Node):
                 self_index = index
                 break
 
-        assert self_index
-
         self.parent.replace_child(self_index, arg)
 
 
