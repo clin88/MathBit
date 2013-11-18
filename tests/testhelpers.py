@@ -1,9 +1,14 @@
 from nose.tools import nottest
-
-# abbreviated imports for convenient test writing
+from operators import Eq
+from operators import Expr as Ex
+from operators import Exp as E
+from operators import Mult as M
+from operators import Fraction as F
+from operators import Plus as P
+from operators import Symbol as S
+from operators import Number as N
 
 from parse import EquationParser
-
 p = EquationParser()
 
 
