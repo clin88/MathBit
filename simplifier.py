@@ -7,7 +7,10 @@ class Simplifier(object):
     def __init__(self, output_delegate):
         self._output = output_delegate
 
-    def simplify_expr(self, expr):
+    def _report_step(self):
+        self._output.add_step(self._expression)
+
+    def simplify(self, expr):
         """
             Simplifies an expression. Handles the following cases:
 
@@ -50,11 +53,12 @@ class Simplifier(object):
             self._simplify_product(node)
         else:
             # TODO: Simplify this fraction
-            fraction = Fraction(numerator, denominator)
-            node.replace_self(fraction)
-            self._simplify_product(fraction.numerator)
-            self._simplify_product(fraction.denominator)
-            # TODO: Report step
+            node.replace_self(Fraction(numerator, denominator))
+            self._report_step()
+
+            self._simplify_product(node.numerator)
+            self._simplify_product(node.denominator)
+
 
 
     def _simplify_product(self, node):
@@ -129,3 +133,32 @@ class Simplifier(object):
 
         # TODO: Use numbers module for numbers.
         # TODO: Subclass children list and override inplace change methods for simpler syntax and better safety
+
+    #def _simplify_fraction(self, node):
+    #    self._simplify_expr(node.numerator)
+    #    self._simplify_expr(node.denominator)
+    #
+    #    numerator = node.numerator
+    #    denominator = node.denominator
+    #    if isinstance(numerator, Fraction):
+    #        if isinstance(denominator, Fraction):
+    #            replacement = Mult(numerator, Fraction(denominator.denominator, denominator.numerator))
+    #            node.replace_self(replacement)
+    #            # TODO: report step
+    #            self._simplify_expr(node)
+    #
+    #        else:
+    #            replacement = Mult(numerator, Fraction(1, denominator))
+    #            node.replace_self(replacement)
+    #            self._simplify_expr(node)
+    #
+    #    elif isinstance(numerator, Exp):
+    #        if isinstance(denominator, Exp):
+    #            if numerator.base == denominator.base:
+    #                replacement = Exp(numerator.base, numerator.exponent - denominator.exponent)
+    #        elif isinstance(denominator, Mult):
+    #            pass
+    #
+    #
+    #    elif isinstance(numerator, Mult):
+
