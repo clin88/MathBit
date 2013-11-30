@@ -6,7 +6,7 @@
 #    +- = 3
 
 class Commutative(tuple):
-    def __new__(cls, *args, ):
+    def __new__(cls, *args):
         if len(args) > 2:
             args = (args[0], cls(*args[1:]))
 
@@ -20,12 +20,6 @@ class Exp(Noncommutative):
     sign = '^'
     oop = 1
     order = Noncommutative.RIGHT_TO_LEFT
-
-    def __new__(cls, *args):
-        if len(args) > 2:
-            args = (args[0], cls(*args[1:]))
-
-        return super().__new__(cls, *args)
 
     @property
     def base(self):
@@ -45,15 +39,9 @@ class Fraction(Noncommutative):
     sign = '/'
     oop = 2
 
-    def __new__(cls, *args):
-        if len(args) > 2:
-            args = (args[0], cls(*args[1:]))
-
-        return super().__new__(cls, *args)
-
     @property
     def numerator(self):
-        return self.children[0]
+        return self[0]
 
     @property
     def denominator(self):
