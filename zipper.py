@@ -99,6 +99,9 @@ class Cursor(object):
                       right_siblings=self._right_siblings)
 
 def make_cursor(root):
+    """
+        Creates a cursor from the root node of a tree.
+    """
     return Cursor(node=root,
                   left_siblings=(),
                   up=None,
