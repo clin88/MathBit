@@ -1,32 +1,34 @@
-from testhelpers import *
-
-p = EquationParser()
-
+from ops import Plus as P
+from ops import Mult as M
+from ops import Fraction as F
+from ops import Exp as E
+from ops import Eq
+from parse import parse
+from decimal import Decimal as D
 """
     Parser tests
 """
 
-
 def test_parse_basic():
-    assert p.parse('1 + 2 + 3 + 4') == Ex(P(1, 2, 3, 4))
-    assert p.parse('1 * 2 * 3 * 4') == Ex(M(1, 2, 3, 4))
-    assert p.parse('2 / 3 / 4') == Ex(F(F(2, 3), 4))
-    assert p.parse('2 ^ 3 ^ 4') == Ex(E(2, E(3, 4)))
+    assert parse('1 + 2 + 3 + 4') == P(1, 2, 3, 4)
+    assert parse('1 * 2 * 3 * 4') == M(1, 2, 3, 4)
+    assert parse('2 / 3 / 4') == F(F(2, 3), 4)
+    assert parse('2 ^ 3 ^ 4') == E(2, E(3, 4))
 
 
 def test_parse_nested():
-    assert p.parse('1 + (a + b)') == Ex(P(1, P('a', 'b')))
-    assert p.parse('1 + [(a * b) + -4]') == Ex(P(1, P(M('a', 'b'), -4)))
+    assert parse('1 + (a + b)') == P(1, P('a', 'b'))
+    assert parse('1 + [(a * b) + -4]') == P(1, P(M('a', 'b'), -4))
 
 
 def test_parse_float():
-    assert p.parse('-1.234 * x') == Ex(M(N('-1.234'), 'x'))
+    assert parse('-1.234 * x') == M(D('-1.234'), 'x')
 
 
 def test_parse_misc():
-    assert p.parse('3 * 4 + -5 / 3 ^ 5') == E(P(M(3, 4), F(-5, E(3, 5))))
+    assert parse('3 * 4 + -5 / 3 ^ 5') == P(M(3, 4), F(-5, E(3, 5)))
 
 
 def test_parse_equals():
-    assert p.parse('3 = 4') == Ex(Eq(3, 4))
-    assert p.parse('3 ^ 2 = 6') == Ex(Eq(P(3, 2), 6))
+    assert parse('3 = 4') == Eq(3, 4)
+    assert parse('3 ^ 2 = 6') == Eq(P(3, 2), 6)
