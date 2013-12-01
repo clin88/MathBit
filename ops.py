@@ -1,3 +1,4 @@
+from functools import reduce
 #Order of operations:
 #
 #    () = 0
@@ -5,21 +6,27 @@
 #    */ = 2
 #    +- = 3
 
-class Commutative(tuple):
+class Operator(tuple):
+    def __repr__(self):
+        r = lambda x, y: str(x) + self.sign + str(y)
+        return "(" + reduce(r, self) + ")"
+
+class Commutative(Operator):
+    def __new__(cls, *args):
+        return super().__new__(cls, args)
+
+    def __hash__(self):
+        return hash(tuple(sorted(self)))
+
+class Exp(Operator):
+    sign = '^'
+    oop = 1
+
     def __new__(cls, *args):
         if len(args) > 2:
             args = (args[0], cls(*args[1:]))
 
-        return super().__new__(cls, *args)
-
-class Noncommutative(tuple):
-    def __hash__(self):
-        return hash(tuple(sorted(self)))
-
-class Exp(Noncommutative):
-    sign = '^'
-    oop = 1
-    order = Noncommutative.RIGHT_TO_LEFT
+        return super().__new__(cls, args)
 
     @property
     def base(self):
@@ -35,9 +42,15 @@ class Mult(Commutative):
     oop = 2
 
 
-class Fraction(Noncommutative):
+class Fraction(Operator):
     sign = '/'
     oop = 2
+
+    def __new__(cls, *args):
+        if len(args) > 2:
+            args = (cls(*args[:-1]), args[-1])
+
+        return super().__new__(cls, args)
 
     @property
     def numerator(self):
@@ -45,7 +58,7 @@ class Fraction(Noncommutative):
 
     @property
     def denominator(self):
-        return self.children[1]
+        return self[1]
 
 
 class Plus(Commutative):
