@@ -1,7 +1,7 @@
 class Cursor(object):
     """
         Rudimentary api for "zipper" data structure. Enables efficient
-        and easy traversal and manipulation for immutable trees.
+        traversal and manipulation for immutable trees.
 
         All nodes should inherit from tuple. Leafs can be arbitrary types.
     """
@@ -34,7 +34,7 @@ class Cursor(object):
 
         up = self._up
         children = self._left_siblings + (self.node,) + self._right_siblings
-        node = up.node.__class__(children)
+        node = up.node.__class__(*children)
         return Cursor(node=node,
                       left_siblings=up._left_siblings,
                       up=up._up,
@@ -106,3 +106,4 @@ def make_cursor(root):
                   left_siblings=(),
                   up=None,
                   right_siblings=())
+

@@ -1,164 +1,194 @@
+from numbers import Number
 from collections import OrderedDict
-from operators import *
-from operators import Number
+
+from ops import Exp, Mult, Fraction, Plus
+from zipper import make_cursor
 
 
-class Simplifier(object):
-    def __init__(self, output_delegate):
-        self._output = output_delegate
-
-    def _report_step(self):
-        self._output.add_step(self._expression)
-
-    def simplify(self, expr):
-        """
-            Simplifies an expression. Handles the following cases:
-
-            1. Combines like terms.
-        """
-        assert isinstance(expr, Expr)
-        self._expression = expr
-        self._simplify_expr(self._expression.child)
-        return self._expression
-
-    def _simplify_expr(self, node):
-        if isinstance(node, Mult):
-            self._simplify_mult(node)
-        elif isinstance(node, Plus):
-            self._simplify_addition(node)
-
-        return node
+def simplify(expression):
+    result = yield from _simplify(make_cursor(expression))
+    return result.node
 
 
-    def _simplify_mult(self, node):
-        """
-            Takes the terms in an expression, seperates numerators and denominators, and simplifies the result.
+def _simplify(cursor):
+    """
+        Dispatch function
+    """
+    node = cursor.node
+    if isinstance(node, Plus):
+        cursor = yield from _simplify_plus(cursor)
+    if isinstance(node, Mult):
+        cursor = yield from _simplify_mult(cursor)
+        #elif isinstance(node, Fraction):
+    #    cursor = yield from _simplify_fraction(cursor)
+    #elif isinstance(node, Exp):
+    #    cursor = yield from _simplify_exp(cursor)
 
-            e.g. 3 * x / 4 * y = 3xy / 4
-        """
-        numerator = Mult()
-        denominator = Mult()
+    return cursor
 
-        for child in node.children:
-            if isinstance(child, Operator):
-                self._simplify_expr(child)
 
-            if isinstance(child, Fraction):
-                numerator.add_children(child.numerator)
-                denominator.add_children(child.denominator)
-            else:
-                numerator.add_children(child)
+def _simplify_children(cursor):
+    """
+        Simplifies the children of the focus node. Returns a cursor to the original focus node.
+    """
+    if not cursor.can_down():
+        return cursor
 
-        if not denominator.children:
-            self._simplify_product(node)
+    cursor = cursor.down()
+    cursor = yield from _simplify(cursor)
+    while cursor.can_right():
+        cursor = cursor.right()
+        cursor = yield from _simplify(cursor)
+
+    cursor = cursor.up()
+    return cursor
+
+
+def _simplify_exp(cursor):
+    pass
+
+
+def _simplify_mult(cursor):
+    """
+        Takes the terms in an expression, seperates numerators and denominators, and simplifies the result.
+
+        e.g. 3 * x / 4 * y = 3xy / 4
+    """
+    cursor = yield from _simplify_children(cursor)
+
+    numerator = Mult()
+    denominator = Mult()
+
+    for child in cursor.node:
+        if isinstance(child, Fraction):
+            numerator = numerator.append(child.numerator)
+            denominator = denominator.append(child.denominator)
         else:
-            # TODO: Simplify this fraction
-            node.replace_self(Fraction(numerator, denominator))
-            self._report_step()
+            numerator = numerator.append(child)
 
-            self._simplify_product(node.numerator)
-            self._simplify_product(node.denominator)
+    if not denominator:
+        cursor = yield from _simplify_product(cursor)
+    else:
+        cursor = cursor.replace_self(Fraction(numerator, denominator))
+        yield cursor
 
+        cursor = yield from _simplify_fraction(cursor)
 
-
-    def _simplify_product(self, node):
-        """
-            Simplifies a Mult() containing no fractions.
-        """
-        factors = OrderedDict()
-        constant = 1
-        # iterate through children recording the number of times each factor appears
-        while node.children:
-            child = node.pop_child(0)
-
-            # remove nested multiplication. e.g. 2 * (x * 3) -> 2 * x * 3
-            if isinstance(child, Mult):
-                node.add_children(*child.children)
-            elif isinstance(child, Number):
-                constant *= child
-            elif isinstance(child, Exp):
-                factors[child.base] = factors.get(child.base, 0) + child.exponent
-            else:
-                factors[child] = factors.get(child, 0) + 1
-
-        # reconstruct the product, grouping like factors using powers
-        if constant != 1:
-            node.insert_child(0, constant)
-        for factor, power in factors.iteritems():
-            node.add_children(Exp(factor, power))                       # TODO: Simplify on the fly, this should also simplify exponents of 1
-
-        # TODO: Report step
-
-        # if after simplification, node is only one item, carry it out
-        if len(node.children) == 1:
-            node.replace_self(node.children[0])
+    return cursor
 
 
-    def _simplify_addition(self, node):
-        """
-            Plus and Mult: c + c + xy + xy -> 2c + 2xy
-            Exponents too: c^2 + c^2 = 2c^2
-        """
-        constant = 0
-        terms = OrderedDict()
-        while node.children:
-            child = node.pop_child(0)
-            self._simplify_expr(child)
+def _simplify_product(cursor):
+    """
+        Simplifies a Mult() containing no fractions.
+    """
+    node = cursor.node
+    constant = 1
+    index = 0
+    factors = OrderedDict()
+    while index < len(node):
+        child = node[index]
+        if isinstance(child, Mult):
+            node = node.insert(index, child)
+            continue
+        elif isinstance(child, Number):
+            constant *= child
+        elif isinstance(child, Exp):
+            factors.setdefault(child.base, []).append(child.exponent)
+        else:
+            factors.setdefault(child, []).append(1)
 
-            if isinstance(child, Plus):
-                node.add_children(*child.children)
-            elif isinstance(child, Number):
-                constant += child
-            elif isinstance(child, Mult):
-                # we assume that this is in simplified form, so the constant factor comes first or not at all
-                if isinstance(child.children[0], Number):
-                    n = child.pop_child(0)
-                else:
-                    n = 1
+        index += 1
 
-                terms[child] = terms.get(child, 0) + n
-            # TODO: Support fractions
+    node = Mult()
+    if constant != 1:
+        node = node.append(constant)
+    for factor, power in factors.items():
+        node = node.append(Exp(factor, Plus(*power)))
+
+    # if after simplification, node is only one item, carry it out
+    if len(node) == 1:
+        node = node[0]
+
+    cursor = cursor.replace_self(node)
+    yield cursor
+
+    cursor = yield from _simplify_children(cursor)
+    return cursor
+
+
+def _simplify_plus(cursor):
+    """
+        Plus and Mult: c + c + xy + xy -> 2c + 2xy
+        Exponents too: c^2 + c^2 = 2c^2
+    """
+    cursor = yield from _simplify_children(cursor)
+
+    constant = 0
+    terms = OrderedDict()
+    node = cursor.node
+    index = 0
+    while index < len(node):
+        child = node[index]
+        if isinstance(child, Plus):
+            node = child + node[1:]
+        elif isinstance(child, Number):
+            constant += child
+        elif isinstance(child, Mult):
+            # we assume that this is in simplified form, so the constant factor comes first or not at all
+            if isinstance(child[0], Number):
+                n = child[0]
+                terms[child[1:]] = terms.get(child, 0) + n
             else:
                 terms[child] = terms.get(child, 0) + 1
+        # TODO: Support fractions
+        else:
+            terms[child] = terms.get(child, 0) + 1
 
-        for term, count in terms.iteritems():
-            node.add_children(self._simplify_expr(Mult(count, term)))
+        index += 1
 
-        if constant:
-            node.add_children(constant)
+    node = Plus()
+    for term, count in terms.items():
+        node = node.append(Mult(count, term))
 
-        if len(node.children) == 1:
-            node.replace_self(node.children[0])
+    if constant:
+        node = node + (constant,)
+
+    if len(node) == 1:
+        node = node[0]
+
+    cursor = cursor.replace_self(node)
+    yield cursor
+
+    cursor = yield from _simplify_children(cursor)
+    return cursor
 
 
-        # TODO: Use numbers module for numbers.
-        # TODO: Subclass children list and override inplace change methods for simpler syntax and better safety
-
-    #def _simplify_fraction(self, node):
-    #    self._simplify_expr(node.numerator)
-    #    self._simplify_expr(node.denominator)
-    #
-    #    numerator = node.numerator
-    #    denominator = node.denominator
-    #    if isinstance(numerator, Fraction):
-    #        if isinstance(denominator, Fraction):
-    #            replacement = Mult(numerator, Fraction(denominator.denominator, denominator.numerator))
-    #            node.replace_self(replacement)
-    #            # TODO: report step
-    #            self._simplify_expr(node)
-    #
-    #        else:
-    #            replacement = Mult(numerator, Fraction(1, denominator))
-    #            node.replace_self(replacement)
-    #            self._simplify_expr(node)
-    #
-    #    elif isinstance(numerator, Exp):
-    #        if isinstance(denominator, Exp):
-    #            if numerator.base == denominator.base:
-    #                replacement = Exp(numerator.base, numerator.exponent - denominator.exponent)
-    #        elif isinstance(denominator, Mult):
-    #            pass
-    #
-    #
-    #    elif isinstance(numerator, Mult):
+#def _simplify_fraction(self, node):
+#    self._simplify_expr(node.numerator)
+#    self._simplify_expr(node.denominator)
+#
+#    numerator = node.numerator
+#    denominator = node.denominator
+#    if isinstance(numerator, Fraction):
+#        if isinstance(denominator, Fraction):
+#            replacement = Mult(numerator, Fraction(denominator.denominator, denominator.numerator))
+#            node.replace_self(replacement)
+#            # TODO: report step
+#            self._simplify_expr(node)
+#
+#        else:
+#            replacement = Mult(numerator, Fraction(1, denominator))
+#            node.replace_self(replacement)
+#            self._simplify_expr(node)
+#
+#    elif isinstance(numerator, Exp):
+#        if isinstance(denominator, Exp):
+#            if numerator.base == denominator.base:
+#                replacement = Exp(numerator.base, numerator.exponent - denominator.exponent)
+#        elif isinstance(denominator, Mult):
+#            pass
+#
+#
+#    elif isinstance(numerator, Mult):
+#        pass
 
