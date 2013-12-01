@@ -9,7 +9,13 @@ from functools import reduce
 class Operator(tuple):
     def __repr__(self):
         r = lambda x, y: str(x) + self.sign + str(y)
-        return "(" + reduce(r, self) + ")"
+        return "(" + str(reduce(r, self)) + ")"
+
+    def append(self, node):
+        return self.__class__(*(self + (node,)))
+
+    def insert(self, index, node):
+        return self.__class__(*(self[:index] + node + self[index + 1:]))
 
 class Commutative(Operator):
     def __new__(cls, *args):

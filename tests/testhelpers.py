@@ -1,12 +1,12 @@
 from nose.tools import nottest
-from operators import Eq
-from operators import Expr as Ex
-from operators import Exp as E
-from operators import Mult as M
-from operators import Fraction as F
-from operators import Plus as P
-from operators import Symbol as S
-from operators import Number as N
+from ops import Eq
+from ops import Expr as Ex
+from ops import Exp as E
+from ops import Mult as M
+from ops import Fraction as F
+from ops import Plus as P
+from ops import Symbol as S
+from ops import Number as N
 
 from parse import EquationParser
 p = EquationParser()
