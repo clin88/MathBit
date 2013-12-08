@@ -13,7 +13,7 @@ def test_parse_basic():
     assert parse('1 + 2 + 3 + 4') == P(1, 2, 3, 4)
     assert parse('1 * 2 * 3 * 4') == M(1, 2, 3, 4)
     assert parse('2 / 3 / 4') == F(F(2, 3), 4)
-    assert parse('2 ^ 3 ^ 4') == E(2, E(3, 4))
+    assert parse('2 ^ 3 ^ 4') == E(E(2, 3), 4)
 
 
 def test_parse_nested():
@@ -31,4 +31,4 @@ def test_parse_misc():
 
 def test_parse_equals():
     assert parse('3 = 4') == Eq(3, 4)
-    assert parse('3 ^ 2 = 6') == Eq(P(3, 2), 6)
+    assert parse('3 ^ 2 = 6') == Eq(E(3, 2), 6)

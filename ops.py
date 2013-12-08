@@ -49,7 +49,7 @@ class Operator(Base, tuple):
             if isinstance(v, Number):
                 return Nmbr(v)
             elif isinstance(v, str):
-                if '.' in str:
+                if '.' in v:
                     return Nmbr(v)
                 else:
                     return Symbol(v)
@@ -121,11 +121,8 @@ class Frac(Operator):
     sign = '/'
     oop = 2
 
-    #def __new__(cls, *args):
-    #    if len(args) > 2:
-    #        args = (cls(*args[:-1]), args[-1])
-    #
-    #    return super().__new__(cls, *args)
+    def __new__(cls, numer, denom):
+        return super().__new__(cls, numer, denom)
 
     @property
     def numer(self):

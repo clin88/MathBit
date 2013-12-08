@@ -1,15 +1,10 @@
 import string
 from array import array
 from collections import deque, OrderedDict
+from functools import partial
 from ops import *
 from decimal import Decimal
 
-
-def num(s):
-    try:
-        return int(s)
-    except ValueError:
-        return Decimal(s)
 
 def parse(equation):
     """
@@ -27,12 +22,18 @@ def _parse(equation):
 
     Don't call directly--let parse() preprocess the equation first.
     """
+    def unpack(func):
+        def __(args):
+            return func(*args)
+
+        return __
+
     OPERATOR_TO_CLASS_MAP = OrderedDict([
-        ('^', Exp),
-        ('*', Mult),
-        ('/', Frac),
-        ('+', Plus),
-        ('=', Eq)
+        ('^', partial(reduce, Exp)),
+        ('*', unpack(Mult)),
+        ('/', partial(reduce, Frac)),
+        ('+', unpack(Plus)),
+        ('=', unpack(Eq))
     ])
     ORDER_OF_OPERATIONS = ['^', '*/', '+', '=']
     OPEN_BRACKETS = "({["
@@ -94,6 +95,6 @@ def _parse(equation):
                 symbs.append(symbols.pop(index))
                 operators.pop(index)
             symbs.append(symbols.pop(index))
-            symbols.insert(index, OPERATOR_TO_CLASS_MAP[op](*symbs))
+            symbols.insert(index, OPERATOR_TO_CLASS_MAP[op](symbs))
 
     return symbols[0]
