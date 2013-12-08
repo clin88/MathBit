@@ -30,7 +30,7 @@ def _parse(equation):
     OPERATOR_TO_CLASS_MAP = OrderedDict([
         ('^', Exp),
         ('*', Mult),
-        ('/', Fraction),
+        ('/', Frac),
         ('+', Plus),
         ('=', Eq)
     ])

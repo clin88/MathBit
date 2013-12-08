@@ -90,9 +90,9 @@ class Cursor(object):
 
     def insert_down(self, node):
         node = self.node.__class__(self.node + (node,))
-        return self.replace_self(node)
+        return self.replace(node)
 
-    def replace_self(self, node):
+    def replace(self, node):
         return Cursor(node=node,
                       left_siblings=self._left_siblings,
                       up=self._up,

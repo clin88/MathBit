@@ -1,8 +1,9 @@
 from nose.tools import nottest
+from zipper import make_cursor
 from ops import Eq
 from ops import Exp as E
 from ops import Mult as M
-from ops import Fraction as F
+from ops import Frac as F
 from ops import Plus as P
 
 @nottest
@@ -29,3 +30,7 @@ def test_generator(generator):
     print(result, type(result))
     return result
 
+@nottest
+def testexpr(func, expr):
+    cursor = make_cursor(expr)
+    return test_generator(func(cursor))

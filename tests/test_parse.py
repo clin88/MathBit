@@ -1,6 +1,6 @@
 from ops import Plus as P
 from ops import Mult as M
-from ops import Fraction as F
+from ops import Frac as F
 from ops import Exp as E
 from ops import Eq
 from parse import parse

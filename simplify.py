@@ -1,14 +1,18 @@
 from numbers import Number
 from collections import OrderedDict
+from functools import wraps, reduce, partial
+from operator import pos, neg, add, mul, imul
 
+from collections.abc import Iterable
 from parse import parse
-from ops import Exp, Mult, Fraction, Plus
+from ops import Exp, Mult, Frac, Plus, Nmbr
+from utils import replace
 from zipper import make_cursor
 
-# used as the hash key in lists of factors to indicate the constant value
-constant = hash(Number)
 
-
+# TODO: Logging to make debugging easier.
+# TODO: Define simplification more formally to help simplify code and expectations.
+# TODO: Fractions unnecessary after simplification.
 def simplify(expression):
     if type(expression) is str:
         expression = parse(expression)
@@ -20,14 +24,14 @@ def simplify(expression):
 
 def _simplify(cursor):
     """
-        Dispatch function
+        Dispatch function.
     """
     node = cursor.node
     if isinstance(node, Plus):
         cursor = yield from _simplify_plus(cursor)
     elif isinstance(node, Mult):
         cursor = yield from _simplify_mult(cursor)
-    #elif isinstance(node, Fraction):
+    #elif isinstance(node, Frac):
     #    cursor = yield from _simplify_fraction(cursor)
     elif isinstance(node, Exp):
         cursor = yield from _simplify_exp(cursor)
@@ -35,18 +39,19 @@ def _simplify(cursor):
     return cursor
 
 
-def _simplify_wrapper(f):
+def _ensure_simplified_children(f):
     """
         Decorates simplification functions to ensure that children nodes
         are simplified.
     """
 
-    def simplify_wrapper(cursor):
+    @wraps(f)
+    def __(cursor):
         cursor = yield from _simplify_children(cursor)
         cursor = yield from f(cursor)
         return cursor
 
-    return simplify_wrapper
+    return __
 
 
 def _simplify_children(cursor):
@@ -66,7 +71,7 @@ def _simplify_children(cursor):
     return cursor
 
 
-@_simplify_wrapper
+@_ensure_simplified_children
 def _simplify_exp(cursor):
     # mult, plus, fraction, exp
     # (x / y) ^ * -> x^* / y^*
@@ -77,57 +82,48 @@ def _simplify_exp(cursor):
     base = cursor.node.base
     exponent = cursor.node.exponent
 
-    if isinstance(base, Fraction):
+    if exponent == 1:
+        cursor = yield from replace(cursor, cursor.node.base)
+    elif isinstance(base, Frac):
+        #new = base.numer ** exponent / base.denom ** exponent
         numer = Exp(base.numer, exponent)
         denom = Exp(base.denom, exponent)
-        cursor = cursor.replace_self(Fraction(numer, denom))
+        cursor = yield from replace(cursor, Frac(numer, denom))
     elif isinstance(base, Exp):
+        #new = base.base ** (base.exponent * exponent)
         new_base = base.base
         new_exponent = Mult(base.exponent, exponent)
-        cursor = cursor.replace_self(Exp(new_base, new_exponent))
+        cursor = yield from replace(cursor, Exp(new_base, new_exponent))
     elif isinstance(base, Mult):
+        #new = reduce(mul, map(exp, base, repeat(exponent)), 1)
         node = Mult()
         for factor in base:
             node = node.append(Exp(factor, exponent))
-        cursor = cursor.replace_self(node)
+        cursor = yield from replace(cursor, node)
     elif isinstance(base, Number) and isinstance(exponent, Number):
         node = base ** exponent
-        cursor = cursor.replace_self(node)
-
-    yield cursor
-
-    node = cursor.node
-    if isinstance(node, Exp) and node.exponent == 1:
-        cursor = cursor.replace_self(cursor.node.base)
-        yield cursor
+        cursor = yield from replace(cursor, node)
 
     cursor = yield from _simplify_children(cursor)
 
     return cursor
 
 
-@_simplify_wrapper
+@_ensure_simplified_children
 def _simplify_mult(cursor):
     """
         Takes the terms in an expression, seperates numerators and denominators, and simplifies the result.
 
         e.g. 3 * x / 4 * y = 3xy / 4
     """
-    numerator = Mult()
-    denominator = Mult()
+    getnumer = lambda node: getattr(node, 'numer', node)
+    getdenom = lambda node: getattr(node, 'denom', 1)
 
-    for child in cursor.node:
-        if isinstance(child, Fraction):
-            numerator = numerator.append(child.numer)
-            denominator = denominator.append(child.denom)
-        else:
-            numerator = numerator.append(child)
+    numerator = reduce(mul, map(getnumer, cursor.node), 1)
+    denominator = reduce(mul, map(getdenom, cursor.node), 1)
 
-    if not denominator:
-        cursor = yield from _simplify_product(cursor)
-    else:
-        cursor = cursor.replace_self(Fraction(numerator, denominator))
-        yield cursor
+    cursor = replace(cursor, numerator / denominator)
+    cursor = yield from _simplify_fraction(cursor)
 
     return cursor
 
@@ -141,7 +137,7 @@ def _simplify_product(cursor):
     # rewrite, combining factors
     node = Mult()
     if constant != 1:
-        node = node.append(factors[constant])
+        node = node.append(constant)
 
     for factor, power in factors.items():
         if power == [1]:
@@ -153,14 +149,13 @@ def _simplify_product(cursor):
     if len(node) == 1:
         node = node[0]
 
-    cursor = cursor.replace_self(node)
-    yield cursor
+    cursor = yield from replace(cursor, node)
 
     cursor = yield from _simplify_children(cursor)
     return cursor
 
 
-@_simplify_wrapper
+@_ensure_simplified_children
 def _simplify_plus(cursor):
     """
         Plus and Mult: c + c + xy + xy -> 2c + 2xy
@@ -198,13 +193,12 @@ def _simplify_plus(cursor):
     if len(node) == 1:
         node = node[0]
 
-    cursor = cursor.replace_self(node)
-    yield cursor
+    cursor = yield from replace(cursor, node)
 
     return cursor
 
 
-@_simplify_wrapper
+@_ensure_simplified_children
 def _simplify_fraction(cursor):
     """
         n, symb, M, E, P
@@ -213,58 +207,75 @@ def _simplify_fraction(cursor):
         xy / y
 
     """
-
-    numer = cursor.node.numer
-    denom = cursor.node.denom
-    is_frac = lambda n: isinstance(n, Fraction)
-
     # deal with compound fractions
-    while True:
-        if is_frac(numer) and is_frac(denom):
-            numer = Mult(numer.numer, denom.denom)
-            denom = Mult(numer.denom, denom.numer)
-        elif is_frac(numer) and not is_frac(denom):
-            numer = numer.numer
-            denom = Mult(numer.denom, denom)
-        elif not is_frac(numer) and is_frac(denom):
-            numer = Mult(numer, denom.denom)
-            denom = denom.numer
-        else:
-            break
-
-    cursor = cursor.replace_self(Fraction(numer, denom))
-    yield cursor
+    if isinstance(cursor.node.numer, Frac) or isinstance(cursor.node.denom, Frac):
+        cursor = yield from _simplify_compound_fractions(cursor)
 
     # eliminate like factors on top and bottom
-    list_factors = lambda x: x if isinstance(x, Mult) else (x,)
-    numer_factors = list_factors(numer)
-    denom_factors = list_factors(denom)
-    intersection = [dfact for nfact in numer_factors
-                    for dfact in denom_factors if nfact == dfact]
+    #list_factors = lambda x: set(x) if isinstance(x, Mult) else {x}
+    #numer = set(list_factors(cursor.node.numer))
+    #denom = set(list_factors(cursor.node.denom))
+    #intersection = numer & denom
+    #if intersection:
+    #    numer = numer - intersection
+    #    denom = denom - intersection
+    #    node = Mult(
+    #        Frac(Mult(intersection), Mult(intersection)),
+    #        Frac(numer, denom)
+    #    )
+    #    cursor = yield from replace(cursor, node)
+    #
+    #    node = Frac(numer, denom)
+    #    cursor = yield from replace(cursor, node)
 
-    if intersection:
-        numer_factors = [f for f in numer_factors if f not in intersection]
-        denom_factors = [f for f in denom_factors if f not in intersection]
-        replacement = Mult(
-            Fraction(Mult(intersection), Mult(intersection)),
-            Fraction(numer_factors, denom_factors)
-        )
-        cursor = cursor.replace_self(replacement)
-        yield cursor
+    # count factors and its exponents
+    factors = {}
+    constant = 1
+    for node, op in ((cursor.node.numer, pos), (cursor.node.denom, neg)):
+        if not isinstance(node, Iterable):
+            node = (node,)
 
-        replacement = Fraction(numer_factors, denom_factors)
-        cursor = cursor.replace_self(replacement)
-        yield cursor
+        for factor in node:
+            if isinstance(factor, Exp):
+                factors.setdefault(factor.base, []).append(op(factor.exponent))
+            elif isinstance(factor, Number):
+                constant *= factor ** op(1)
+            else:
+                factors.setdefault(factor, []).append(1)
 
-    # count factors
-    numer_factors = _count_factors(cursor.node.numer)
-    denom_factors = _count_factors(cursor.node.denom)
-    for factor in numer_factors:
-        if factor in denom_factors:
-            numer_factors[factor] = [numer_factors.append]
+    numer = Nmbr(1)
+    denom = Nmbr(1)
+    for factor, exponent in factors.items():
+        #exponent = reduce(add, exponent)
+        exponent = Plus(*exponent)
+        if len(exponent) == 1:
+            exponent = exponent[0]
 
+        if isinstance(exponent, Number) and exponent < 0:
+            denom = denom.append(Exp(factor, exponent))
+        else:
+            numer = numer.append(Exp(factor, exponent))
+
+    cursor = yield from replace(cursor, Frac(numer,denom))
+    cursor = yield from _simplify_children(cursor)
+
+    return cursor
+
+def _simplify_compound_fractions(cursor):
+    numer = cursor.node.numer
+    denom = reciprocal(cursor.node.denom)
+    node = Frac(
+        Mult(getattr(numer, 'numer', numer), getattr(denom, 'denom', None)),
+        Mult(getattr(numer, 'denom', None), getattr(denom, 'numer', denom))
+    )
+
+    cursor = yield from replace(cursor, node)
+    return cursor
 
 def _count_factors(node):
+    """
+    Finds the powers of each factor in node and returns an OrderedDict with key 'factor' and lists of exponent nodes.
+    """
     factors = OrderedDict()
     constant = 1
     if isinstance(node, Mult):
@@ -283,10 +294,17 @@ def _count_factors(node):
 
             index += 1
     elif isinstance(node, Exp):
-        node.setdefault(node.base, []).append(node.exponent)
+        factors.setdefault(node.base, []).append(node.exponent)
     elif isinstance(node, Number):
         constant *= node
     else:
         factors.setdefault(node, []).append(1)
 
     return constant, factors
+
+
+def reciprocal(node):
+    if isinstance(node, Frac):
+        return Frac(node.denom, node.numer)
+    else:
+        return Frac(1, node)
