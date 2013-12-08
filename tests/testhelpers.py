@@ -5,6 +5,7 @@ from ops import Mult as M
 from ops import Frac as F
 from ops import Plus as P
 from ops import Symbol as S
+from ops import Nmbr as N
 
 x = S('x')
 y = S('y')

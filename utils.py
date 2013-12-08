@@ -22,8 +22,7 @@ def replace(cursor, replacement):
     return cursor
 
 def cat(*tuples):
-    """
-    Since the + operator is overloaded, use this function to concatenate tuples.
+    """Since the + operator is overloaded, use this function to concatenate tuples.
 
     If something is not iterable, make it a tuple.
     """
