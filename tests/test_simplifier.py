@@ -3,7 +3,7 @@ from simplify import simplify, _simplify_mult
 
 
 def test_solver_mult_basic():
-    print(testexpr(_simplify_mult, M(1,2,'x',F('num','denom'))))
+    print(testexpr(_simplify_mult, M([1,2,x,F([y, z])])))
     assert test_generator(simplify('5 * (4 * 3)')) == 60
     assert test_generator(simplify('5 * (4 * x)')) == M(20, 'x')
     assert test_generator(simplify('(x * 5) * 4 * 3')) == M(60, 'x')

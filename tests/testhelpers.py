@@ -5,6 +5,11 @@ from ops import Exp as E
 from ops import Mult as M
 from ops import Frac as F
 from ops import Plus as P
+from ops import Symbol as S
+
+x = S('x')
+y = S('y')
+z = S('z')
 
 @nottest
 def test(func, *args, **kwargs):

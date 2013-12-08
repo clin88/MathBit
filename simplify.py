@@ -5,9 +5,8 @@ from operator import pos, neg, add, mul, imul
 
 from collections.abc import Iterable
 from parse import parse
-from ops import Exp, Mult, Frac, Plus, Nmbr
+from ops import Exp, Mult, Frac, Plus, Nmbr, OpCursor
 from utils import replace
-from zipper import make_cursor
 
 
 # TODO: Logging to make debugging easier.
@@ -17,7 +16,7 @@ def simplify(expression):
     if type(expression) is str:
         expression = parse(expression)
 
-    cursor = make_cursor(expression)
+    cursor = OpCursor.makecursor(expression)
     result = yield from _simplify(cursor)
     return result.node
 
@@ -61,13 +60,13 @@ def _simplify_children(cursor):
     if not cursor.can_down():
         return cursor
 
-    cursor = cursor.down()
+    cursor = cursor.movedown()
     cursor = yield from _simplify(cursor)
-    while cursor.can_right():
-        cursor = cursor.right()
+    while cursor.canright():
+        cursor = cursor.moveright()
         cursor = yield from _simplify(cursor)
 
-    cursor = cursor.up()
+    cursor = cursor.moveup()
     return cursor
 
 

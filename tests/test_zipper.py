@@ -1,4 +1,4 @@
-from zipper import *
+from zipper import Cursor
 
 tree = (
     (1, 2),
@@ -6,7 +6,7 @@ tree = (
     'x',
     'y'
 )
-cursor = make_cursor(tree)
+cursor = Cursor.makecursor(tree)
 
 
 def test_make_cursor():
@@ -15,20 +15,20 @@ def test_make_cursor():
 
 def test_movements():
     c = cursor
-    c = c.down()
+    c = c.movedown()
     assert c.node == (1, 2)
-    c = c.right().right()
+    c = c.moveright().moveright()
     assert c.node == 'x'
-    c = c.left().left()
+    c = c.moveleft().moveleft()
     assert c.node == (1, 2)
-    c = c.up()
+    c = c.moveup()
     assert c.node == tree
 
 
 def test_top():
     c = cursor
     while c.can_down():
-        c = c.down()
+        c = c.movedown()
 
     assert c.top().node == cursor.node
 
@@ -36,9 +36,9 @@ def test_top():
 def test_inserts():
     c = cursor
     c = c.insert_right(1)
-    assert c.right().node == 1
+    assert c.moveright().node == 1
     c = c.insert_left((1, 2))
-    assert c.left().node == (1, 2)
+    assert c.moveleft().node == (1, 2)
     c = c.insert_down('x')
     assert c.node[-1] == 'x'
 

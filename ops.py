@@ -1,30 +1,13 @@
 from decimal import Decimal as D
-from decimal import Decimal, DecimalException
+from decimal import DecimalException
 from functools import reduce
 from collections import OrderedDict
 from numbers import Number
-#Order of operations:
-#
-#    ^ = 1
-#    */ = 2
-#    +- = 3
-from utils import fin
+from utils import cat
+from zipper import Cursor
 
 
 class Operator(tuple):
-    def __new__(cls, *args, **kwargs):
-        # filter out Nones
-        args = [arg for arg in args if arg is not None]
-
-        # if arg has len 1, extract it
-        for index, arg in enumerate(args):
-            if isinstance(arg, tuple) and len(arg) == 1:
-                args[index] = arg[0]
-            else:
-                pass
-
-        return super().__new__(cls, args)
-
     def __repr__(self):
         r = lambda x, y: str(x) + self.sign + str(y)
         return "(" + str(reduce(r, self)) + ")"
@@ -51,9 +34,6 @@ class Operator(tuple):
         return Mult(other, self)
 
 class Commutative(Operator):
-    def __new__(cls, *args):
-        return super().__new__(cls, *args)
-
     def __hash__(self):
         return hash(sorted(self) + (self.__class__,))
 
@@ -79,6 +59,22 @@ class Exp(Operator):
 class Mult(Commutative):
     sign = '*'
     oop = 2
+
+    def __mul__(self, other):
+        """self * other
+        """
+        if isinstance(other, Mult):
+            return Mult(cat(self, other))
+        else:
+            return Mult([self, other])
+
+    def __rmul__(self, other):
+        """ other * self
+        """
+        if isinstance(other, Mult):
+            return Mult(cat(other, self))
+        else:
+            return Mult([other, self])
 
     def count_factors(self):
         # TODO: Finish this function and use it to simplify 'simplify' code
@@ -107,11 +103,11 @@ class Frac(Operator):
     sign = '/'
     oop = 2
 
-    def __new__(cls, *args):
-        if len(args) > 2:
-            args = (cls(*args[:-1]), args[-1])
-
-        return super().__new__(cls, *args)
+    #def __new__(cls, *args):
+    #    if len(args) > 2:
+    #        args = (cls(*args[:-1]), args[-1])
+    #
+    #    return super().__new__(cls, *args)
 
     @property
     def numer(self):
@@ -174,3 +170,23 @@ class Nmbr(Number):
 class Symbol(object):
     def __init__(self, name):
         self.name = name
+
+    def __repr__(self):
+        return self.name
+
+    def __mul__(self, other):
+        if isinstance(other, Operator):
+            return self * other
+        else:
+            return Mult(self, other)
+
+    def __rmul__(self, other):
+        if isinstance(other, Operator):
+            return other * self
+        else:
+            return Mult(other, self)
+
+class OpCursor(Cursor):
+    def upper(self):
+        children = cat(self.left_siblings, self.node, self.right_siblings)
+        return self.upnode.__class__(children)
