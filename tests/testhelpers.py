@@ -1,5 +1,4 @@
 from nose.tools import nottest
-from zipper import make_cursor
 from ops import Eq
 from ops import Exp as E
 from ops import Mult as M

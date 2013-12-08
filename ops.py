@@ -8,6 +8,9 @@ from zipper import Cursor
 
 
 class Operator(tuple):
+    def __new__(cls, *args):
+        return super().__new__(cls, args)
+
     def __repr__(self):
         r = lambda x, y: str(x) + self.sign + str(y)
         return "(" + str(reduce(r, self)) + ")"
@@ -33,6 +36,27 @@ class Operator(tuple):
     def __rmul__(self, other):
         return Mult(other, self)
 
+    def __truediv__(self, other):
+        return Frac(self, other)
+
+    def __rtruediv__(self, other):
+        return Frac(other, self)
+
+    def __add__(self, other):
+        return Plus(self, other)
+
+    def __radd__(self, other):
+        return Plus(other, self)
+
+    def __sub__(self, other):
+        return Plus(self, -other)
+
+    def __rsub__(self, other):
+        return Plus(other, -self)
+
+    def __neg__(self):
+        return Mult(-1, self)
+
 class Commutative(Operator):
     def __hash__(self):
         return hash(sorted(self) + (self.__class__,))
@@ -41,11 +65,8 @@ class Exp(Operator):
     sign = '^'
     oop = 1
 
-    def __new__(cls, *args):
-        if len(args) > 2:
-            args = (args[0], cls(*args[1:]))
-
-        return super().__new__(cls, *args)
+    def __new__(cls, base, exponent):
+        return super().__new__(cls, base, exponent)
 
     @property
     def base(self):
@@ -64,17 +85,17 @@ class Mult(Commutative):
         """self * other
         """
         if isinstance(other, Mult):
-            return Mult(cat(self, other))
+            return Mult(*cat(self, other))
         else:
-            return Mult([self, other])
+            return Mult(*cat(self, (other,)))
+
+    def __neg__(self):
+        return Mult(*cat(-1, self))
 
     def __rmul__(self, other):
         """ other * self
         """
-        if isinstance(other, Mult):
-            return Mult(cat(other, self))
-        else:
-            return Mult([other, self])
+        return Mult(*cat((other,), self))
 
     def count_factors(self):
         # TODO: Finish this function and use it to simplify 'simplify' code
@@ -126,6 +147,19 @@ class Plus(Commutative):
         for term in self:
             node = node.append(Mult(-1, term))
         return node
+
+    def __add__(self, other):
+        # self + other
+        # Plus(1, 2, 3) + Exp() == Plus(1, 2, 3, Exp())
+        if isinstance(other, Plus):
+            return Plus(*cat(self, other))
+        # Plus(1, 2, 3) + Plus(4, 5, 6) == Plus(1, 2, 3, 4, 5, 6)
+        else:
+            return Plus(*cat(self, (other,)))
+
+    def __radd__(self, other):
+        # other + self
+        return Plus(*cat(other, self))
 
     def __sub__(self, other):
         return Plus(self + -other)
