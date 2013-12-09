@@ -1,17 +1,18 @@
 from numbers import Number
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from functools import wraps, reduce, partial
-from operator import pos, neg, add, mul, imul
+from operator import pos, neg, add, mul, imul, pow
+from itertools import repeat
 
 from collections.abc import Iterable
 from parse import parse
 from ops import Exp, Mult, Frac, Plus, Nmbr, OpCursor
-from utils import replace
+from utils import genhelper, identityiter, cat, OrderedDefaultDict
 
 
-# TODO: Logging to make debugging easier.
 # TODO: Define simplification more formally to help simplify code and expectations.
 # TODO: Fractions unnecessary after simplification.
+@genhelper
 def simplify(expression):
     if type(expression) is str:
         expression = parse(expression)
@@ -20,23 +21,20 @@ def simplify(expression):
     result = yield from _simplify(cursor)
     return result.node
 
-
+@genhelper
 def _simplify(cursor):
+    """Dispatch function.
     """
-        Dispatch function.
-    """
-    node = cursor.node
-    if isinstance(node, Plus):
-        cursor = yield from _simplify_plus(cursor)
-    elif isinstance(node, Mult):
-        cursor = yield from _simplify_mult(cursor)
-    #elif isinstance(node, Frac):
-    #    cursor = yield from _simplify_fraction(cursor)
-    elif isinstance(node, Exp):
-        cursor = yield from _simplify_exp(cursor)
+    dispatch = {
+        Plus: _simplify_plus,
+        Mult: simpmult,
+        Frac: simpfrac,
+        Exp: simpexp
+    }
+    op = type(cursor.node)
 
+    cursor = yield from dispatch.get(op, identityiter)(cursor)
     return cursor
-
 
 def _ensure_simplified_children(f):
     """
@@ -53,25 +51,29 @@ def _ensure_simplified_children(f):
     return __
 
 
+@genhelper
 def _simplify_children(cursor):
-    """
-        Simplifies the children of the focus node. Returns a cursor to the original focus node.
+    """Simplifies the children of the focus node. Returns a cursor to the original focus node.
     """
     if not cursor.can_down():
         return cursor
 
     cursor = cursor.movedown()
-    cursor = yield from _simplify(cursor)
-    while cursor.canright():
-        cursor = cursor.moveright()
+
+    while True:
         cursor = yield from _simplify(cursor)
+        if cursor.canright():
+            cursor = cursor.moveright()
+        else:
+            break
 
     cursor = cursor.moveup()
     return cursor
 
 
+@genhelper
 @_ensure_simplified_children
-def _simplify_exp(cursor):
+def simpexp(cursor):
     # mult, plus, fraction, exp
     # (x / y) ^ * -> x^* / y^*
     # (x ^ y) ^ z -> x ^ y ^ z
@@ -82,34 +84,28 @@ def _simplify_exp(cursor):
     exponent = cursor.node.exponent
 
     if exponent == 1:
-        cursor = yield from replace(cursor, cursor.node.base)
+        cursor = yield from cursor.replaceyield(cursor.node.base)
     elif isinstance(base, Frac):
-        #new = base.numer ** exponent / base.denom ** exponent
-        numer = Exp(base.numer, exponent)
-        denom = Exp(base.denom, exponent)
-        cursor = yield from replace(cursor, Frac(numer, denom))
+        node = base.numer ** exponent / base.denom ** exponent
+        cursor = yield from cursor.replaceyield(node)
     elif isinstance(base, Exp):
-        #new = base.base ** (base.exponent * exponent)
-        new_base = base.base
-        new_exponent = Mult(base.exponent, exponent)
-        cursor = yield from replace(cursor, Exp(new_base, new_exponent))
+        node = base.base ** (base.exponent * exponent)
+        cursor = yield from cursor.replaceyield(node)
     elif isinstance(base, Mult):
-        #new = reduce(mul, map(exp, base, repeat(exponent)), 1)
-        node = Mult()
-        for factor in base:
-            node = node.append(Exp(factor, exponent))
-        cursor = yield from replace(cursor, node)
+        node = reduce(mul, map(pow, base, repeat(exponent)))
+        cursor = yield from cursor.replaceyield(node)
     elif isinstance(base, Number) and isinstance(exponent, Number):
         node = base ** exponent
-        cursor = yield from replace(cursor, node)
+        cursor = yield from cursor.replaceyield(node)
 
     cursor = yield from _simplify_children(cursor)
 
     return cursor
 
 
+@genhelper
 @_ensure_simplified_children
-def _simplify_mult(cursor):
+def simpmult(cursor):
     """
         Takes the terms in an expression, seperates numerators and denominators, and simplifies the result.
 
@@ -118,48 +114,53 @@ def _simplify_mult(cursor):
     getnumer = lambda node: getattr(node, 'numer', node)
     getdenom = lambda node: getattr(node, 'denom', 1)
 
-    numerator = reduce(mul, map(getnumer, cursor.node), 1)
-    denominator = reduce(mul, map(getdenom, cursor.node), 1)
+    numerator = reduce(mul, map(getnumer, cursor.node))
+    denominator = reduce(mul, map(getdenom, cursor.node))
 
-    cursor = replace(cursor, numerator / denominator)
-    cursor = yield from _simplify_fraction(cursor)
+    if denominator != 1:
+        # we're actually dealing with a fraction, so delegate there.
+        cursor = yield from cursor.replaceyield(numerator / denominator)
+        cursor = yield from simpfrac(cursor)
+    else:
+        # TODO: When we have eval, put off constant evaluation until next step.
+        constant = 1
+        factors = OrderedDefaultDict(lambda: Nmbr(0))
+
+        # flatten any nested mults
+        node = cat(*cursor.node, flatten=Mult)
+        cursor = yield from cursor.replaceyield(node)
+
+        for child in node:
+            if isinstance(child, Nmbr):
+                constant *= child.value
+            elif isinstance(child, Exp):
+                factors[child.base] += child.exponent
+            else:
+                factors[child] += 1
+
+        # reconstruct
+        factors = map(pow, factors.keys(), factors.values())
+        node = Nmbr(constant) * reduce(mul, factors, Nmbr(1))
+        cursor = yield from cursor.replaceyield(node)
+        cursor = yield from _simplify_children(cursor)
 
     return cursor
 
 
-def _simplify_product(cursor):
-    """
-        Simplifies a Mult() containing no fractions.
-    """
-    constant, factors = _count_factors(cursor.node)
-
-    # rewrite, combining factors
-    node = Mult()
-    if constant != 1:
-        node = node.append(constant)
-
-    for factor, power in factors.items():
-        if power == [1]:
-            node = node.append(factor)
-        else:
-            node = node.append(Exp(factor, Plus(*power)))
-
-    # if after simplification, node is only one item, carry it out
-    if len(node) == 1:
-        node = node[0]
-
-    cursor = yield from replace(cursor, node)
-
-    cursor = yield from _simplify_children(cursor)
-    return cursor
-
-
+@genhelper
 @_ensure_simplified_children
 def _simplify_plus(cursor):
     """
         Plus and Mult: c + c + xy + xy -> 2c + 2xy
         Exponents too: c^2 + c^2 = 2c^2
     """
+    # count terms
+    terms = OrderedDefaultDict(lambda:Nmbr(0))
+
+    node = cat(*cursor.node, flatten=Plus)
+    for child in node:
+        pass
+
     constant = 0
     terms = OrderedDict()
     node = cursor.node
@@ -197,8 +198,9 @@ def _simplify_plus(cursor):
     return cursor
 
 
+@genhelper
 @_ensure_simplified_children
-def _simplify_fraction(cursor):
+def simpfrac(cursor):
     """
         n, symb, M, E, P
 

@@ -38,10 +38,10 @@ class Cursor(object):
         if not self.can_up():
             raise IndexError("No room to move up on tree.")
 
-        return Cursor(node=self.upper(),
-                      left_siblings=self.up.left_siblings,
-                      up=self.up.up,
-                      right_siblings=self.up.right_siblings)
+        return self.__class__(node=self.upper(),
+                              left_siblings=self.up.left_siblings,
+                              up=self.up.up,
+                              right_siblings=self.up.right_siblings)
 
     def canleft(self):
         return bool(self.left_siblings)
@@ -50,10 +50,10 @@ class Cursor(object):
         if not self.canleft():
             raise IndexError("No room to move left on tree.")
 
-        return Cursor(node=self.left_siblings[-1],
-                      left_siblings=self.left_siblings[:-1],
-                      up=self.up,
-                      right_siblings=(self.node,) + self.right_siblings)
+        return self.__class__(node=self.left_siblings[-1],
+                              left_siblings=self.left_siblings[:-1],
+                              up=self.up,
+                              right_siblings=(self.node,) + self.right_siblings)
 
     def canright(self):
         return bool(self.right_siblings)
@@ -62,10 +62,10 @@ class Cursor(object):
         if not self.canright():
             raise IndexError("No room to move right on tree.")
 
-        return Cursor(node=self.right_siblings[0],
-                      left_siblings=self.left_siblings + (self.node,),
-                      up=self.up,
-                      right_siblings=self.right_siblings[1:])
+        return self.__class__(node=self.right_siblings[0],
+                              left_siblings=self.left_siblings + (self.node,),
+                              up=self.up,
+                              right_siblings=self.right_siblings[1:])
 
     def can_down(self):
         return bool(isinstance(self.node, tuple) and self.node)
@@ -74,22 +74,22 @@ class Cursor(object):
         if not self.can_down():
             raise IndexError("No room to move down on tree.")
 
-        return Cursor(node=self.node[0],
-                      left_siblings=(),
-                      up=self,
-                      right_siblings=self.node[1:])
+        return self.__class__(node=self.node[0],
+                              left_siblings=(),
+                              up=self,
+                              right_siblings=self.node[1:])
 
     def insert_left(self, node):
-        return Cursor(node=self.node,
-                      left_siblings=self.left_siblings + (node,),
-                      up=self.up,
-                      right_siblings=self.right_siblings)
+        return self.__class__(node=self.node,
+                              left_siblings=self.left_siblings + (node,),
+                              up=self.up,
+                              right_siblings=self.right_siblings)
 
     def insert_right(self, node):
-        return Cursor(node=self.node,
-                      left_siblings=self.left_siblings,
-                      up=self.up,
-                      right_siblings=(node,) + self.right_siblings)
+        return self.__class__(node=self.node,
+                              left_siblings=self.left_siblings,
+                              up=self.up,
+                              right_siblings=(node,) + self.right_siblings)
 
     def insert_down(self, node):
         # TODO: Fix this
@@ -97,10 +97,10 @@ class Cursor(object):
         return self.replace(node)
 
     def replace(self, node):
-        return Cursor(node=node,
-                      left_siblings=self.left_siblings,
-                      up=self.up,
-                      right_siblings=self.right_siblings)
+        return self.__class__(node=node,
+                              left_siblings=self.left_siblings,
+                              up=self.up,
+                              right_siblings=self.right_siblings)
 
     @classmethod
     def makecursor(cls, root):

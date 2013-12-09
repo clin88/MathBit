@@ -1,9 +1,8 @@
 from tests.testhelpers import *
-from simplify import simplify, _simplify_mult
+from simplify import simplify, simpmult
 
 
 def test_solver_mult_basic():
-    print(testexpr(_simplify_mult, M([1,2,x,F([y, z])])))
     assert test_generator(simplify('5 * (4 * 3)')) == 60
     assert test_generator(simplify('5 * (4 * x)')) == M(20, 'x')
     assert test_generator(simplify('(x * 5) * 4 * 3')) == M(60, 'x')
@@ -41,8 +40,9 @@ def test_simplify_fractions():
 
 if __name__ == "__main__":
     test_solver_mult_basic()
-    test_solver_mult_fractions()
     test_exp()
+    test_solver_mult_fractions()
     test_solver_plus()
     test_solver_mult_combine_symbols()
     pass
+

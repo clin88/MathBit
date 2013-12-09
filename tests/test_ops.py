@@ -3,7 +3,7 @@ from decimal import Decimal as D
 from tests.testhelpers import *
 
 def test_moveup():
-    tree = (
+    tree = M(
         (1, 2),
         ('x', 'y', (3, 4)),
         'x',
@@ -21,6 +21,7 @@ def test_basic_arithmetic():
     assert node * 5 == M(node, 5)
     assert node ** 5 == E(node, 5)
     assert node / 5 == F(node, 5)
+    assert node / 1 == node
     assert node + 5 == P(node, 5)
     assert node - 5 == P(node, -5)
     assert -node == M(-1, node)
@@ -29,12 +30,14 @@ def test_plus():
     node = P(100, 100)
     assert node + 5 == P(100, 100, 5)
     assert node + node == P(100, 100, 100, 100)
+    assert node + 0 == node
 
 def test_mult():
     node = M(2, 3)
     assert node * 5 == M(2, 3, 5)
     assert node * node == M(2, 3, 2, 3)
     assert -node == M(-1, 2, 3)
+    assert node * 1 == node
 
 def test_exp():
     try:
@@ -73,6 +76,3 @@ def test_symbol():
     assert x ** 5 == E(x, 5)
     assert x + 5 == P(x, 5)
     assert x - 5 == P(x, -5)
-
-if __name__ == "__main__":
-    test_basic_arithmetic()

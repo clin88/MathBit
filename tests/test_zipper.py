@@ -43,6 +43,11 @@ def test_inserts():
     assert c.node[-1] == 'x'
 
 
+def test_cursor_subclass():
+    # TODO: Write tests to ensure cursor always produces instances of subclass
+    pass
+
+
 if __name__ == "__main__":
     test_make_cursor()
     test_movements()

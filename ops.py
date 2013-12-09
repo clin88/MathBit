@@ -11,22 +11,38 @@ class Base(object):
     """
 
     def __pow__(self, power, modulo=None):
-        return Exp(self, power)
+        if power == 1:
+            return self
+        else:
+            return Exp(self, power)
 
     def __mul__(self, other):
-        return Mult(*cat(self, other, type=Mult))
+        if self == 1:
+            return other
+        elif other == 1:
+            return self
+        else:
+            return Mult(*cat(self, other, flatten=Mult))
 
     def __truediv__(self, other):
-        return Frac(self, other)
+        if other == 1:
+            return self
+        else:
+            return Frac(self, other)
 
     def __add__(self, other):
-        return Plus(*cat(self, other, type=Plus))
+        if other == 0:
+            return self
+        elif self == 0:
+            return other
+        else:
+            return Plus(*cat(self, other, flatten=Plus))
 
     def __sub__(self, other):
-        return Plus(*cat(self, -other, type=Plus))
+        return self + -other
 
     def __neg__(self):
-        return Mult(*cat(-1, self, type=Mult))
+        return Mult(*cat(-1, self, flatten=Mult))
 
 class Operator(Base, tuple):
     def __eq__(self, other):
@@ -37,7 +53,7 @@ class Operator(Base, tuple):
 
     def __new__(cls, *args):
         def coerce(v):
-            if isinstance(v, Number):
+            if isinstance(v, float) or isinstance(v, int) or isinstance(v, D):
                 return Nmbr(v)
             elif isinstance(v, str):
                 if '.' in v:
@@ -153,7 +169,7 @@ class Nmbr(Base, Number):
 
     def __eq__(self, other):
         if not isinstance(other, Number):
-            raise TypeError("Comparison between Nmbrs and %s (%s) not supported" % (type(other), other))
+            return False
         else:
             return self.value == other
 
@@ -174,10 +190,16 @@ class Symbol(Base):
         return hash(self.name)
 
     def __eq__(self, other):
-        # TODO: Which is best?
         return hash(self) == hash(other)
 
 class OpCursor(Cursor):
     def upper(self):
-        children = cat(self.left_siblings, self.node, self.right_siblings)
+        children = cat(self.left_siblings, (self.node,), self.right_siblings)
         return self.upnode.__class__(*children)
+
+    def replaceyield(self, node):
+        if node != self.node:
+            self = self.replace(node)
+            yield self
+
+        return self
