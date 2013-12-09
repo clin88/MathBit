@@ -1,3 +1,4 @@
+from collections import Iterable
 from itertools import chain
 from collections.abc import Iterable
 
@@ -11,7 +12,6 @@ def fin(generator):
         except StopIteration as e:
             return e.value
 
-
 def replace(cursor, replacement):
     """
     If the focus node of cursor differs from replacement, replace it and yield. Otherwise, return same cursor.
@@ -21,12 +21,39 @@ def replace(cursor, replacement):
         yield cursor
     return cursor
 
-def cat(*tuples):
-    """Since the + operator is overloaded, use this function to concatenate tuples.
+class GenHelper(Iterator):
+    """Adds utility functions for working with generators.
 
-    If something is not iterable, make it a tuple.
+    Can be decorated onto generator functions with @genhelper.
     """
+    def __init__(self, genf, args, kwargs):
+        self._gen = genf(*args, **kwargs)
 
-    makeiter = lambda item: item if isinstance(item, Iterable) else (item,)
-    tuples = tuple(map(makeiter, tuples))
-    return tuple(chain(*tuples))
+    def __next__(self):
+        return next(self._gen)
+
+    def __iter__(self):
+        return self
+
+    def fin(self):
+        """Consume entire generator and return return value.
+        """
+        while True:
+            try:
+                next(self._gen)
+            except StopIteration as e:
+                return e.value
+
+def genhelper(f):
+    @wraps(f)
+    def __(*args, **kwargs):
+        return Gen(f, args, kwargs)
+
+    return __
+
+def cat(*iters, type=Iterable):
+    """Flattens iters if instance of type.
+    """
+    unpackif = lambda iter: iter if isinstance(iter, type) else (iter,)
+    unpacked = map(unpackif, iters)
+    return tuple(chain(*unpacked))

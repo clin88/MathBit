@@ -1,19 +1,10 @@
 from decimal import Decimal as D
 from decimal import DecimalException
-from itertools import chain
 from functools import reduce, total_ordering
 from collections import OrderedDict
-from collections.abc import Iterable
 from numbers import Number
 from utils import cat
 from zipper import Cursor
-
-def flattenif(*iters, type=Iterable):
-    """Flattens iters if instance of type.
-    """
-    unpackif = lambda iter: iter if isinstance(iter, type) else (iter,)
-    unpacked = map(unpackif, iters)
-    return tuple(chain(*unpacked))
 
 class Base(object):
     """Mix in that loads in defaults for operators.
@@ -23,26 +14,26 @@ class Base(object):
         return Exp(self, power)
 
     def __mul__(self, other):
-        return Mult(*flattenif(self, other, type=Mult))
+        return Mult(*cat(self, other, type=Mult))
 
     def __truediv__(self, other):
         return Frac(self, other)
 
     def __add__(self, other):
-        return Plus(*flattenif(self, other, type=Plus))
+        return Plus(*cat(self, other, type=Plus))
 
     def __sub__(self, other):
-        return Plus(*flattenif(self, -other, type=Plus))
+        return Plus(*cat(self, -other, type=Plus))
 
     def __neg__(self):
-        return Mult(*flattenif(-1, self, type=Mult))
+        return Mult(*cat(-1, self, type=Mult))
 
 class Operator(Base, tuple):
     def __eq__(self, other):
         return hash(self) == hash(other)
 
     def __hash__(self):
-        return hash(flattenif(self, self.__class__))
+        return hash(cat(self, self.__class__))
 
     def __new__(cls, *args):
         def coerce(v):
@@ -72,7 +63,7 @@ class Commutative(Operator):
     def __hash__(self):
         # returns an order agnostic hash
         sortedhashes = sorted(map(hash, self))
-        sortednode = tuple(flattenif(sortedhashes, self.__class__))
+        sortednode = tuple(cat(sortedhashes, self.__class__))
         return hash(sortednode)
 
 class Exp(Operator):
@@ -136,11 +127,6 @@ class Frac(Operator):
 class Plus(Commutative):
     sign = '+'
     oop = 3
-    def __neg__(self):
-        node = Plus()
-        for term in self:
-            node = node.append(Mult(-1, term))
-        return node
 
 class Eq(Commutative):
     sign = '='
