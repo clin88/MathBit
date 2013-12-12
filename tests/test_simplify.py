@@ -11,7 +11,7 @@ def test_solver_mult_basic():
 
 def test_solver_mult_combine_symbols():
     assert test_generator(simplify('x * x')) == E('x', 2)
-    #assert test(simplify_expr, '3 * x * y * 3 * y / (4 * y * x)')) == F(M(9, S('x'), E(S('y'), 2)), M(4, S('y'), S('x'))))
+    assert test_generator(simplify('3 * x * y * 3 * y / (4 * y * x)')) == F(M(9, S('y')), 4)
 
 
 def test_solver_mult_fractions():
@@ -25,7 +25,6 @@ def test_solver_mult_fractions():
 def test_solver_plus():
     assert test_generator(simplify('5 + 4 + 3')) == 12
     assert test_generator(simplify('5 + x + x + 3')) == P(8, M(2, 'x'))
-
 
 def test_exp():
     assert test_generator(simplify('3 ^ 4')) == 81
@@ -46,11 +45,11 @@ def test_eval():
     assert evalexpr(M(5, P(4, 5), 6)) == 270
 
 if __name__ == "__main__":
+    test_solver_mult_combine_symbols()
     test_simplify_fractions()
     test_solver_mult_fractions()
     test_solver_plus()
     test_solver_mult_basic()
     test_exp()
-    test_solver_mult_combine_symbols()
     pass
 

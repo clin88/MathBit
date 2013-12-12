@@ -72,6 +72,8 @@ def simpexp(cursor):
     node = None
     if exponent == 1:
         node = cursor.node.base
+    elif exponent == 0:
+        node = Nmbr(1)
     elif isinstance(base, Frac):
         node = base.numer ** exponent / base.denom ** exponent
     elif isinstance(base, Exp):
@@ -100,8 +102,7 @@ def simpmult(cursor):
 
     # if there are fractions, combine into one big fraction and delegate to simpfrac
 
-    # TODO: When we have evalexpr, put off constant evaluation until next step.
-    constant = 1
+    constant = Nmbr(1)
     factors = OrderedDefaultDict(lambda: Nmbr(0))
 
     # flatten any nested mults
@@ -119,9 +120,13 @@ def simpmult(cursor):
 
     # reconstruct
     factors = map(pow, factors.keys(), factors.values())
-    node = constant * reduce(mul, factors, 1)
+    variables = reduce(mul, factors, 1)
+    cursor = yield from cursor.replaceyield(constant * variables)
 
-    cursor = yield from cursor.replaceyield(node)
+    # after constant evaluation step
+    constant = evalexpr(constant)
+    cursor = yield from cursor.replaceyield(constant * variables)
+
     cursor = yield from simpchildren(cursor)
 
     # if there is a fraction, join into fraction and delegate to simpfrac
@@ -154,7 +159,7 @@ def simpplus(cursor):
 
     # count terms
     terms = OrderedDefaultDict(lambda: Nmbr(0))
-    constant = 0
+    constant = Nmbr(0)
     for term in node:
         if isinstance(term, Nmbr):
             constant += term.value
@@ -165,10 +170,15 @@ def simpplus(cursor):
         else:
             terms[term] += 1
 
+    # reconstruct
     terms = map(mul, terms.values(), terms.keys())
-    node = reduce(add, terms, 0) + constant
+    variables = reduce(add, terms, 0)
+    cursor = yield from cursor.replaceyield(variables + constant)
 
-    cursor = yield from cursor.replaceyield(node)
+    # evaluate constant
+    constant = evalexpr(constant)
+    cursor = yield from cursor.replaceyield(variables + constant)
+
     cursor = yield from simpchildren(cursor)
 
     return cursor
@@ -212,37 +222,43 @@ def simpfrac(cursor):
     #    node = Frac(numer, denom)
     #    cursor = yield from replace(cursor, node)
 
-    # count factors and its exponents
+    # count factors
     factors = OrderedDefaultDict(lambda: Nmbr(0))
     constant = Nmbr(1)
-
-    # count factors
     for op, node in [(identity, cursor.node.numer), (neg, cursor.node.denom)]:
         for factor in cat(node, flatten=Mult):
             if isinstance(factor, Exp):
                 factors[factor.base] += op(factor.exponent)
             elif isinstance(factor, Number):
-                constant *= (factor ** op(1))
+                if op is identity:
+                    constant *= factor
+                elif op is neg:
+                    constant /= factor
             else:
                 factors[factor] += op(1)
 
     # reconstruct fraction
     def isdenom(factor):
-        exponent = getattr(factor, 'exponent', 1)
+        exponent = simplify(getattr(factor, 'exponent', 1)).eval()
         return isinstance(exponent, Number) and exponent < 0
 
-    constant = evalexpr(constant)
     factors = list(map(pow, factors.keys(), factors.values()))
-
     numer = filterfalse(isdenom, factors)
-    numer = constant.p * reduce(mul, numer, 1)
+    numer = reduce(mul, numer, 1)
 
     denom = filter(isdenom, factors)
     denom = map(lambda factor: simplify(factor ** -1).eval(), denom)
-    denom = constant.q * reduce(mul, denom, 1)
+    denom = reduce(mul, denom, 1)
 
-    cursor = yield from cursor.replaceyield(numer / denom)
-    #cursor = yield from simpchildren(cursor)
+    # yield unevaluated constant
+    cursor = yield from cursor.replaceyield(constant * (numer / denom))
+
+    # post-constant evaluation and merging into fraction
+    constant = evalexpr(constant)
+    cursor = yield from cursor.replaceyield((constant.p * numer) / (constant.q * denom))
+
+    # simplify children
+    cursor = yield from simpchildren(cursor)
 
     return cursor
 
