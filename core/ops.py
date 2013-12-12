@@ -47,6 +47,9 @@ def mathify(piece=slice(0, None, None)):
 
 class Base():
     """Mix in that loads in defaults for operators.
+
+    Note that, with some exceptions, all operations will return a representation of that expression,
+    not the result of that operation. To evaluate a numerical operation, use evalexpr() in simplify.
     """
 
     @staticmethod
