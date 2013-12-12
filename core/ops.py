@@ -1,15 +1,9 @@
 from builtins import slice
-from decimal import Decimal as D
-from decimal import DecimalException
-from functools import reduce, total_ordering, wraps
-from collections import OrderedDict
+from functools import reduce, wraps
 from numbers import Number
+from core import Symbol, Nmbr
 from utils import cat
-from zipper import Cursor
 
-# TODO: Don't need fractions anymore, just represent using exponents
-# TODO: Write printer functions.
-# TODO: Create an 'identity node' in place of using 0's and 1's
 
 def _mathify(arg):
     if isinstance(arg, Base):
@@ -25,7 +19,7 @@ def _mathify(arg):
         raise TypeError("Not a math object: %s." % arg)
 
 def mathify(piece=slice(0,None,None)):
-    """Wrapper to ensure all arguments are mathified. Only necessary on public functions
+    """Wrapper to ensure all arguments are math types. Only necessary on public functions
     that take arbitrary inputs. Only acts on args, not kwargs.
 
     Slice can be used to specify which arguments to mathify."""
@@ -112,13 +106,13 @@ class Base():
         return self._add(other, self)
 
     def __sub__(self, other):
-        return self + -other
+        return self._add(self, self.__neg__(other))
 
     def __rsub__(self, other):
-        return other + -self
+        return self._add(other, self.__neg__(self))
 
     def __neg__(self):
-        return -1 * self
+        return self._mul(-1, self)
 
 class Operator(Base, tuple):
     def __eq__(self, other):
@@ -178,27 +172,6 @@ class Mult(Commutative):
     sign = '*'
     oop = 2
 
-    def count_factors(self):
-        node = self
-        index = 0
-        constant = 1
-        factors = OrderedDict()
-
-        while index < len(node):
-            child = node[index]
-            if isinstance(child, Mult):
-                node = node.insert(index, child)
-                continue
-            elif isinstance(child, Number):
-                constant *= child
-            elif isinstance(child, Exp):
-                factors.setdefault(child.base, []).append(child.exponent)
-            else:
-                factors.setdefault(child, []).append(1)
-
-            index += 1
-
-        return constant, factors
 
 class Frac(Operator):
     sign = '/'
@@ -224,68 +197,3 @@ class Eq(Commutative):
     sign = '='
     oop = 10
 
-@total_ordering
-class Nmbr(Base, Number):
-    def __repr__(self):
-        return str(self.value)
-
-    def __init__(self, value):
-        if isinstance(value, float):
-            self.value = D(value)
-        elif isinstance(value, str):
-            try:
-                self.value = D(value)
-            except DecimalException:
-                raise TypeError("Attempted to parse %s as decimal. Failed." % value)
-        elif isinstance(value, Nmbr):
-            self.value = value.value
-        else:
-            self.value = value
-
-    @property
-    def p(self):
-        return getattr(self.value, 'numerator', self.value)
-
-    @property
-    def q(self):
-        return getattr(self.value, 'denominator', Nmbr(1))
-
-    def __hash__(self):
-        return hash(self.value)
-
-    def __eq__(self, other):
-        if not isinstance(other, Number):
-            return False
-        else:
-            return self.value == other
-
-    def __lt__(self, other):
-        return self.value < other
-
-    def __neg__(self):
-        return Nmbr(-self.value)
-
-class Symbol(Base):
-    def __init__(self, name):
-        self.name = name
-
-    def __repr__(self):
-        return self.name
-
-    def __hash__(self):
-        return hash(self.name)
-
-    def __eq__(self, other):
-        return hash(self) == hash(other)
-
-class OpCursor(Cursor):
-    def upper(self):
-        children = cat(self.left_siblings, (self.node,), self.right_siblings)
-        return self.upnode.__class__(*children)
-
-    def replaceyield(self, node):
-        if node != self.node:
-            self = self.replace(node)
-            yield self
-
-        return self

@@ -1,3 +1,6 @@
+from utils import cat
+
+
 class Cursor(object):
     """
         Rudimentary api for "zipper" data structure. Enables efficient
@@ -108,3 +111,16 @@ class Cursor(object):
                    left_siblings=(),
                    up=None,
                    right_siblings=())
+
+
+class OpCursor(Cursor):
+    def upper(self):
+        children = cat(self.left_siblings, (self.node,), self.right_siblings)
+        return self.upnode.__class__(*children)
+
+    def replaceyield(self, node):
+        if node != self.node:
+            self = self.replace(node)
+            yield self
+
+        return self
