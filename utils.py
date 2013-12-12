@@ -2,20 +2,13 @@ from collections import Iterator, Iterable, OrderedDict, Callable
 from itertools import chain
 from functools import wraps
 
-#def replace(cursor, replacement):
-#    """
-#    If the focus node of cursor differs from replacement, replace it and yield. Otherwise, return same cursor.
-#    """
-#    if cursor.node != replacement:
-#        cursor = cursor.replace(replacement)
-#        yield cursor
-#    return cursor
 
 class GenHelper(Iterator):
     """Adds utility functions for working with generators.
 
     Can be decorated onto generator functions with @genhelper.
     """
+
     def __init__(self, genf, args, kwargs):
         self._gen = genf(*args, **kwargs)
 
@@ -25,14 +18,15 @@ class GenHelper(Iterator):
     def __iter__(self):
         return self
 
-    def fin(self):
-        """Consume entire generator and return return value.
+    def eval(self):
+        """Consume entire generator and get return value.
         """
         while True:
             try:
                 next(self._gen)
             except StopIteration as e:
                 return e.value
+
 
 def genhelper(f):
     @wraps(f)
@@ -51,7 +45,7 @@ class OrderedDefaultDict(OrderedDict):
 
     def __init__(self, default_factory=None, *a, **kw):
         if (default_factory is not None and
-            not isinstance(default_factory, Callable)):
+                not isinstance(default_factory, Callable)):
             raise TypeError('first argument must be callable')
         OrderedDict.__init__(self, *a, **kw)
         self.default_factory = default_factory
@@ -83,20 +77,38 @@ class OrderedDefaultDict(OrderedDict):
 
     def __deepcopy__(self, memo):
         import copy
+
         return type(self)(self.default_factory,
                           copy.deepcopy(self.items()))
+
     def __repr__(self):
         return 'OrderedDefaultDict(%s, %s)' % (self.default_factory,
-                                        OrderedDict.__repr__(self))
+                                               OrderedDict.__repr__(self))
+
 
 def cat(*iters, flatten=Iterable):
-    """Flattens iters if instance of type.
+    """Concatenates iters. Flattens iters if instance of type.
+
+    Note: Also has the ability to concatenate non-iterable items.
     """
     unpackif = lambda iter: iter if isinstance(iter, flatten) else (iter,)
     unpacked = map(unpackif, iters)
     return tuple(chain(*unpacked))
 
+
+def flatten(node):
+    """Flattens nested nodes of same type.
+    """
+    cls = type(node)
+    unpackif = lambda child: child if isinstance(child, cls) else (child,)
+    unpacked = map(unpackif, node)
+    return cls(*chain(*unpacked))
+
+
 def identityiter(arg):
     if False:
         yield
+    return arg
+
+def identity(arg):
     return arg

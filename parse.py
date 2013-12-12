@@ -1,9 +1,8 @@
 import string
 from array import array
-from collections import deque, OrderedDict
+from collections import deque
 from functools import partial
 from ops import *
-from decimal import Decimal
 
 
 def parse(equation):
@@ -21,6 +20,8 @@ def _parse(equation):
     Parses an equation in canonical format into an expression tree.
 
     Don't call directly--let parse() preprocess the equation first.
+
+    TODO: Ugly function, maybe tokenize in the previous section?
     """
     def unpack(func):
         def __(args):

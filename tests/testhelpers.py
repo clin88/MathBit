@@ -27,7 +27,7 @@ def test_generator(generator):
         try:
             result = generator.__next__()
             top = result.top()
-            print("STEP %s, %s" % (result, top))
+            print("STEP %s" % top)
         except StopIteration as e:
             result = e.value
             break

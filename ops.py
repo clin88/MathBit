@@ -1,48 +1,124 @@
+from builtins import slice
 from decimal import Decimal as D
 from decimal import DecimalException
-from functools import reduce, total_ordering
+from functools import reduce, total_ordering, wraps
 from collections import OrderedDict
 from numbers import Number
 from utils import cat
 from zipper import Cursor
 
-class Base(object):
+# TODO: Don't need fractions anymore, just represent using exponents
+# TODO: Write printer functions.
+# TODO: Create an 'identity node' in place of using 0's and 1's
+
+def _mathify(arg):
+    if isinstance(arg, Base):
+        return arg
+    elif isinstance(arg, Number):
+        return Nmbr(arg)
+    elif isinstance(arg, str):
+        if '.' in arg:
+            return Nmbr(arg)
+        else:
+            return Symbol(arg)
+    else:
+        raise TypeError("Not a math object: %s." % arg)
+
+def mathify(piece=slice(0,None,None)):
+    """Wrapper to ensure all arguments are mathified. Only necessary on public functions
+    that take arbitrary inputs. Only acts on args, not kwargs.
+
+    Slice can be used to specify which arguments to mathify."""
+
+    def _(f):
+        """What the hell why didn't they just make the first argument for a decorator function
+        the function and not require this double nesting nonsense?
+        """
+
+        @wraps(f)
+        def __(*args, **kwargs):
+            args = list(args)
+            mathifyargs = args.__getitem__(piece)
+            mathifyargs = list(map(_mathify, mathifyargs))
+            args.__setitem__(piece, mathifyargs)
+
+            return f(*args, **kwargs)
+        return __
+    return _
+
+class Base():
     """Mix in that loads in defaults for operators.
     """
 
-    def __pow__(self, power, modulo=None):
-        if power == 1:
-            return self
+    @staticmethod
+    @mathify()
+    def _pow(base, power):
+        if 1 in [base, power]:
+            return base if power == 1 else 1
         else:
-            return Exp(self, power)
+            return Exp(base, power)
+
+    def __pow__(self, power, modulo=None):
+        return self._pow(self, power)
+
+    def __rpow__(self, power, modulo=None):
+        return self._pow(power, self)
+
+    @staticmethod
+    @mathify()
+    def _mul(a, b):
+        isnmbr = lambda n: isinstance(n, Number)
+        if 1 in [a, b]:
+            return a if b == 1 else b
+        elif -1 in [a, b] and all(map(isnmbr, [a,b])):
+            return -a if b == -1 else -b
+        else:
+            return Mult(*cat(a, b, flatten=Mult))
 
     def __mul__(self, other):
-        if self == 1:
-            return other
-        elif other == 1:
-            return self
+        return self._mul(self, other)
+
+    def __rmul__(self, other):
+        return self._mul(other, self)
+
+    @staticmethod
+    @mathify()
+    def _div(num, denom):
+        if denom == 1:
+            return num
         else:
-            return Mult(*cat(self, other, flatten=Mult))
+            return Frac(num, denom)
 
     def __truediv__(self, other):
-        if other == 1:
-            return self
+        if other == 0:
+            raise ArithmeticError("Division by zero :(. The fabric of space time is at stake here!")
+        return self._div(self, other)
+
+    def __rtruediv__(self, other):
+        return self._div(other, self)
+
+    @staticmethod
+    @mathify()
+    def _add(a, b):
+        if 0 in [a,b]:
+            return a if b == 0 else b
         else:
-            return Frac(self, other)
+            return Plus(*cat(a, b, flatten=Plus))
 
     def __add__(self, other):
-        if other == 0:
-            return self
-        elif self == 0:
-            return other
-        else:
-            return Plus(*cat(self, other, flatten=Plus))
+        return self._add(self, other)
+
+    def __radd__(self, other):
+        return self._add(other, self)
 
     def __sub__(self, other):
         return self + -other
 
+    def __rsub__(self, other):
+        return other + -self
+
     def __neg__(self):
-        return Mult(*cat(-1, self, flatten=Mult))
+        return -1 * self
 
 class Operator(Base, tuple):
     def __eq__(self, other):
@@ -51,23 +127,23 @@ class Operator(Base, tuple):
     def __hash__(self):
         return hash(cat(self, self.__class__))
 
+    @mathify(piece=slice(1,None,None))
     def __new__(cls, *args):
-        def coerce(v):
-            if isinstance(v, float) or isinstance(v, int) or isinstance(v, D):
-                return Nmbr(v)
-            elif isinstance(v, str):
-                if '.' in v:
-                    return Nmbr(v)
-                else:
-                    return Symbol(v)
-            else:
-                return v
-
-        return super().__new__(cls, map(coerce, args))
+        return super().__new__(cls, args)
 
     def __repr__(self):
         r = lambda x, y: str(x) + self.sign + str(y)
         return "(" + str(reduce(r, self)) + ")"
+
+    def __getitem__(self, arg):
+        item = super().__getitem__(arg)
+        if isinstance(arg, slice):
+            try:
+                return type(self)(*item)
+            except TypeError:
+                return tuple(item)
+        else:
+            return item
 
     def append(self, *node):
         return self.__class__(*(self + tuple(node)))
@@ -161,8 +237,18 @@ class Nmbr(Base, Number):
                 self.value = D(value)
             except DecimalException:
                 raise TypeError("Attempted to parse %s as decimal. Failed." % value)
+        elif isinstance(value, Nmbr):
+            self.value = value.value
         else:
             self.value = value
+
+    @property
+    def p(self):
+        return getattr(self.value, 'numerator', self.value)
+
+    @property
+    def q(self):
+        return getattr(self.value, 'denominator', Nmbr(1))
 
     def __hash__(self):
         return hash(self.value)
