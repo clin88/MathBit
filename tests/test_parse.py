@@ -1,10 +1,12 @@
-from ops import Plus as P
-from ops import Mult as M
-from ops import Frac as F
-from ops import Exp as E
-from ops import Eq
-from parse import parse
 from decimal import Decimal as D
+
+from core.ops import Plus as P
+from core.ops import Mult as M
+from core.ops import Frac as F
+from core.ops import Exp as E
+from core.ops import Eq
+from parse import parse
+
 """
     Parser tests
 """

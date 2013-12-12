@@ -112,3 +112,6 @@ def identityiter(arg):
 
 def identity(arg):
     return arg
+
+def istypef(type):
+    return lambda arg: isinstance(arg, type)

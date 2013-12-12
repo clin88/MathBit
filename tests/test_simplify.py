@@ -1,5 +1,5 @@
 from tests.testhelpers import *
-from simplify import simplify
+from simplify import simplify, evalexpr
 
 
 def test_solver_mult_basic():
@@ -19,7 +19,7 @@ def test_solver_mult_fractions():
     assert test_generator(simplify('4 / x * y * 1 * z')) == F(M(4.0, 'y', 'z'), 'x')
     assert test_generator(simplify('4 / x * (y / 1) * z')) == F(M(4, 'y', 'z'), 'x')
     assert test_generator(simplify('4 / x * (y * 1) * z')) == F(M(4, 'y', 'z'), 'x')
-    #assert test_generator(simplify('3 * x / 4 * y')) == F(M(3, 'x', 'y'), 4)
+    assert test_generator(simplify('3 * x / 4 * y')) == F(M(3, 'x', 'y'), 4)
 
 
 def test_solver_plus():
@@ -33,16 +33,24 @@ def test_exp():
     assert test_generator(simplify('(x / y) ^ 2')) == F(E('x', 2), E('y', 2))
     assert test_generator(simplify('(x * y) ^ 2')) == M(E('x', 2), E('y', 2))
 
+
 def test_simplify_fractions():
-    print(test_generator(simplify('a/b')))
-    assert test_generator(simplify('a/b/c/d/e')) == F('a', M('b','c','d','e'))
-    print(test_generator(simplify('a/(b/(c/(d/e)))')))
+    assert test_generator(simplify('a/b')) == F('a', 'b')
+    assert test_generator(simplify('a/b/c/d/e')) == F('a', M('b', 'c', 'd', 'e'))
+    assert test_generator(simplify('a/(b/(c/(d/e)))')) == F(M('a','c','e'),M('b','d'))
+
+
+def test_eval():
+    assert evalexpr(M(5, 4, 3)) == 60
+    assert evalexpr(P(3, 4, 5)) == 12
+    assert evalexpr(M(5, P(4, 5), 6)) == 270
 
 if __name__ == "__main__":
+    test_simplify_fractions()
+    test_solver_mult_fractions()
     test_solver_plus()
     test_solver_mult_basic()
     test_exp()
-    test_solver_mult_fractions()
     test_solver_mult_combine_symbols()
     pass
 

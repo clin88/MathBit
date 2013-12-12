@@ -41,3 +41,4 @@ nosetests.xml
 
 # file for doing random shit
 scratch.py
+scratch/

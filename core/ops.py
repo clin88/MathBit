@@ -1,7 +1,8 @@
 from builtins import slice
-from functools import reduce, wraps
+from decimal import Decimal as D
+from fractions import Fraction
+from functools import reduce, wraps, total_ordering
 from numbers import Number
-from core import Symbol, Nmbr
 from utils import cat
 
 
@@ -18,7 +19,8 @@ def _mathify(arg):
     else:
         raise TypeError("Not a math object: %s." % arg)
 
-def mathify(piece=slice(0,None,None)):
+
+def mathify(piece=slice(0, None, None)):
     """Wrapper to ensure all arguments are math types. Only necessary on public functions
     that take arbitrary inputs. Only acts on args, not kwargs.
 
@@ -37,8 +39,11 @@ def mathify(piece=slice(0,None,None)):
             args.__setitem__(piece, mathifyargs)
 
             return f(*args, **kwargs)
+
         return __
+
     return _
+
 
 class Base():
     """Mix in that loads in defaults for operators.
@@ -48,7 +53,7 @@ class Base():
     @mathify()
     def _pow(base, power):
         if 1 in [base, power]:
-            return base if power == 1 else 1
+            return base if power == 1 else Nmbr(1)
         else:
             return Exp(base, power)
 
@@ -64,7 +69,7 @@ class Base():
         isnmbr = lambda n: isinstance(n, Number)
         if 1 in [a, b]:
             return a if b == 1 else b
-        elif -1 in [a, b] and all(map(isnmbr, [a,b])):
+        elif -1 in [a, b] and all(map(isnmbr, [a, b])):
             return -a if b == -1 else -b
         else:
             return Mult(*cat(a, b, flatten=Mult))
@@ -94,7 +99,7 @@ class Base():
     @staticmethod
     @mathify()
     def _add(a, b):
-        if 0 in [a,b]:
+        if 0 in [a, b]:
             return a if b == 0 else b
         else:
             return Plus(*cat(a, b, flatten=Plus))
@@ -106,13 +111,14 @@ class Base():
         return self._add(other, self)
 
     def __sub__(self, other):
-        return self._add(self, self.__neg__(other))
+        return self._add(self, -other)
 
     def __rsub__(self, other):
-        return self._add(other, self.__neg__(self))
+        return self._add(other, -self)
 
     def __neg__(self):
         return self._mul(-1, self)
+
 
 class Operator(Base, tuple):
     def __eq__(self, other):
@@ -121,7 +127,7 @@ class Operator(Base, tuple):
     def __hash__(self):
         return hash(cat(self, self.__class__))
 
-    @mathify(piece=slice(1,None,None))
+    @mathify(piece=slice(1, None, None))
     def __new__(cls, *args):
         return super().__new__(cls, args)
 
@@ -145,12 +151,14 @@ class Operator(Base, tuple):
     def insert(self, index, *items):
         return self.__class__(*(self[:index] + tuple(items) + self[index + 1:]))
 
+
 class Commutative(Operator):
     def __hash__(self):
         # returns an order agnostic hash
         sortedhashes = sorted(map(hash, self))
         sortednode = tuple(cat(sortedhashes, self.__class__))
         return hash(sortednode)
+
 
 class Exp(Operator):
     sign = '^'
@@ -193,7 +201,85 @@ class Plus(Commutative):
     sign = '+'
     oop = 3
 
+
 class Eq(Commutative):
     sign = '='
     oop = 10
 
+
+class Symbol(Base):
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return self.name
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
+
+@total_ordering
+class Nmbr(Base, Number):
+    """Wrapper around various Number types. When operations are conducted on Nmbr, it
+    returns representations of that operation but does not evaluate the representation.
+
+    To evaluate numbers, access the underlying value attribute, which is always a Decimal.
+
+    To get a fractional representation, access the numerator/denominator properties.
+    Or use p and q for short.
+    """
+
+    def __repr__(self):
+        if self.value % 1 == 0:
+            return str(int(self.value))
+        else:
+            return str(self.value)
+
+    def __init__(self, value):
+        if isinstance(value, float):
+            # hackish, but don't know enough about binary floats to worry right now
+            self.value = D(repr(value))
+        elif isinstance(value, Nmbr):
+            self.value = value.value
+        else:
+            self.value = D(value)
+
+    def _asfrac(self):
+        return Fraction(self.value)
+
+    @property
+    def numerator(self):
+        return Nmbr(self._asfrac().numerator)
+
+    @property
+    def p(self):
+        return self.numerator
+
+    @property
+    def denominator(self):
+        return Nmbr(self._asfrac().denominator)
+
+    @property
+    def q(self):
+        return self.denominator
+
+    def __hash__(self):
+        return hash(self.value)
+
+    def __eq__(self, other):
+        if isinstance(other, Nmbr):
+            return self.value == other.value
+        else:
+            return self.value == other
+
+    def __lt__(self, other):
+        if isinstance(other, Nmbr):
+            return self.value < other.value
+        else:
+            return self.value < other
+
+    def __neg__(self):
+        return Nmbr(-self.value)

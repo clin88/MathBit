@@ -1,15 +1,16 @@
 from nose.tools import nottest
-from ops import Eq
-from ops import Exp as E
-from ops import Mult as M
-from ops import Frac as F
-from ops import Plus as P
-from ops import Symbol as S
-from ops import Nmbr as N
+from core import Symbol as S
+from core import Mult as M
+from core import Frac as F
+from core import Plus as P
+from core import Exp as E
+from core import Nmbr as N
 
-x = S('x')
-y = S('y')
-z = S('z')
+# tricks my IDE to not removing the above imports:
+
+if False:
+    S, M, F, P, E, N
+
 
 @nottest
 def test(func, *args, **kwargs):
@@ -20,6 +21,7 @@ def test(func, *args, **kwargs):
     result = func(*args, **kwargs)
     print(result, type(result))
     return result
+
 
 @nottest
 def test_generator(generator):
@@ -34,6 +36,7 @@ def test_generator(generator):
 
     print(result, type(result))
     return result
+
 
 @nottest
 def testexpr(func, expr):

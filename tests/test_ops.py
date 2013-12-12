@@ -1,6 +1,9 @@
-from ops import OpCursor, Operator
 from decimal import Decimal as D
+
+from core.ops import Operator
+from core import OpCursor
 from tests.testhelpers import *
+
 
 def test_moveup():
     tree = M(
@@ -13,8 +16,10 @@ def test_moveup():
     cursor = cursor.movedown()
     assert cursor.moveup().node == tree
 
+
 def test_instantiation():
-    assert Operator(1,2,3,4)
+    assert Operator(1, 2, 3, 4)
+
 
 def test_basic_arithmetic():
     node = Operator(100)
@@ -30,6 +35,7 @@ def test_basic_arithmetic():
     assert 5 - node == P(5, -node)
     assert -node == M(-1, node)
 
+
 def test_identity_ops():
     node = Operator(10)
     assert node * 1 == node
@@ -40,11 +46,13 @@ def test_identity_ops():
     assert node - 0 == node
     assert 0 - node == -node
 
+
 def test_plus():
     node = P(100, 100)
     assert node + 5 == P(100, 100, 5)
     assert node + node == P(100, 100, 100, 100)
     assert node + 0 == node
+
 
 def test_mult():
     node = M(2, 3)
@@ -53,6 +61,7 @@ def test_mult():
     assert -node == M(-1, 2, 3)
     assert node * 1 == node
 
+
 def test_exp():
     try:
         node = E(2, 3, 4)
@@ -60,6 +69,7 @@ def test_exp():
         assert True
 
     node = E(2, 3)
+
 
 def test_frac():
     try:
@@ -70,6 +80,7 @@ def test_frac():
         assert False
 
     node = F(2, 3)
+
 
 def test_nmbr():
     assert N(5) == 5
@@ -85,6 +96,7 @@ def test_nmbr():
 
     assert -1 * n == -5
     assert n * -1 == -5
+
 
 def test_symbol():
     x = S('x')

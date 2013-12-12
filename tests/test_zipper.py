@@ -1,4 +1,4 @@
-from zipper import Cursor
+from core.zipper import Cursor
 
 tree = (
     (1, 2),

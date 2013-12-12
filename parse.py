@@ -1,8 +1,8 @@
 import string
 from array import array
-from collections import deque
-from functools import partial
-from ops import *
+from collections import deque, OrderedDict
+from functools import partial, reduce
+from core.ops import Mult, Exp, Frac, Plus, Eq, Nmbr, Symbol
 
 
 def parse(equation):

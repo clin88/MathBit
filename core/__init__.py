@@ -1,3 +1,2 @@
-from core.ops import Frac, Mult, Plus, Exp
-from core.nmbrs import Nmbr, Symbol
+from core.ops import Frac, Mult, Plus, Exp, Base, Symbol, Nmbr
 from core.zipper import OpCursor
